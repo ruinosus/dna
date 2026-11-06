@@ -1,0 +1,36 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Férias
+  %% agent-review 2.3.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Férias
+  participant p4 as Abrir caso no Workday
+  participant p5 as workday.empresa.example
+  participant p6 as Office 365 Outlook
+  participant p7 as Conhecimento no SharePoint
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Férias.
+  Note over p2: O orquestrador encaminha para Férias.<br/>«Agente especialista em férias e ausências: saldo, pedido de férias, folgas, licenças e aprovação do gestor. Use quando a categoria for Ferias.»
+  %% # Férias
+  %% > Férias recebe o histórico e «CategoriaSolicitacao».
+  p2->>p3: Férias recebe o histórico e «CategoriaSolicitacao».
+  %% # Abrir caso no Workday
+  %% > Usa o fluxo «Abrir caso no Workday».
+  p3->>p4: Usa o fluxo «Abrir caso no Workday».
+  %% # workday.empresa.example
+  %% > O fluxo chega a workday.empresa.example.
+  p4->>p5: O fluxo chega a workday.empresa.example.
+  %% # Office 365 Outlook
+  %% > Usa Office 365 Outlook (SendEmailV2).
+  p3->>p6: Usa Office 365 Outlook (SendEmailV2).
+  %% # Conhecimento no SharePoint
+  %% > Consulta «Conhecimento no SharePoint».
+  p3->>p7: Consulta «Conhecimento no SharePoint».
+  %% # Orquestrador
+  %% > A resposta volta ao cliente pelo orquestrador.
+  p3-->>p2: A resposta volta ao cliente pelo orquestrador.
+  p2-->>p1: a resposta

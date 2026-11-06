@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>visual-explainer</title>
+<meta name="description" content="A skill that makes Claude explain an idea by drawing it: an explainer that draws itself, in one HTML file.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #1f2a37; --muted: #667085; --line: #e4e7ec; --page: #f4f6f8; --card: #fff; --paper: #ffffff; --accent: #1f4e8c; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e9ecef; --muted: #a3acb6; --line: #333a42; --page: #15181c; --card: #1e2228; --paper: #ffffff; --accent: #8fa8ff; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
+main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 40px; }
+h1 { margin: 0; font: 600 clamp(34px, 6vw, 56px)/1.1 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.02em; }
+h2 { margin: 0; font: 600 26px/1.2 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.01em; }
+p { margin: 0; }
+a { color: var(--accent); }
+.hero { display: grid; gap: 18px; justify-items: center; text-align: center; }
+.hero .lead { font-size: 20px; max-width: 720px; }
+.hero img { width: 100%; max-width: 900px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.button { display: inline-block; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; font-weight: 700; }
+.button.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: transform .15s, border-color .15s; }
+.card:hover { transform: translateY(-2px); border-color: var(--ink); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card img { width: 100%; aspect-ratio: 900 / 560; object-fit: contain; border-radius: 8px; background: #ffffff; }
+.meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.card b { font: 600 19px/1.3 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
+.goal { font-size: 14px; color: var(--muted); }
+.how { display: grid; gap: 14px; }
+.how img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+code { font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+footer { color: var(--muted); font-size: 14px; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1>visual-explainer</h1>
+    <p class="lead">Ask Claude to explain something by drawing it — and get an explainer that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
+    <img src="images/hero.png" alt="An explainer on demand and capacity at the HR help desk, drawn in the business theme">
+    <div class="actions">
+      <a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a>
+      <a class="button" href="https://github.com/ruinosus/dna">GitHub</a>
+    </div>
+  </section>
+  <section>
+    <h2>Explainers — open one and press Next</h2>
+    <p class="goal" style="margin: 4px 0 16px">Each one was written by Claude with this skill and plays right here in your browser.</p>
+    <div class="grid">
+      <a class="card" href="explainers/demand-capacity.html">
+        <img src="thumbs/demand-capacity.png" alt="Demanda e capacidade ↔ a fila do RH" loading="lazy">
+        <span class="meta"><span>Gestão</span><span class="lang">Português</span></span>
+        <b>Demanda e capacidade ↔ a fila do RH</b>
+        <span class="goal">Ver que a fila depende da capacidade comparada com a demanda.</span>
+      </a>
+      <a class="card" href="explainers/hr-case.html">
+        <img src="thumbs/hr-case.png" alt="Um caso de RH, do assistente ao analista" loading="lazy">
+        <span class="meta"><span></span><span class="lang">Português</span></span>
+        <b>Um caso de RH, do assistente ao analista</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/hr-service-history.html">
+        <img src="thumbs/hr-service-history.png" alt="O atendimento de RH ↔ dez anos em uma linha" loading="lazy">
+        <span class="meta"><span>Processos</span><span class="lang">Português</span></span>
+        <b>O atendimento de RH ↔ dez anos em uma linha</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/hr-tickets-flow.html">
+        <img src="thumbs/hr-tickets-flow.png" alt="Dos chamados às respostas" loading="lazy">
+        <span class="meta"><span></span><span class="lang">Português</span></span>
+        <b>Dos chamados às respostas</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/onboarding-week.html">
+        <img src="thumbs/onboarding-week.png" alt="A primeira semana na empresa" loading="lazy">
+        <span class="meta"><span></span><span class="lang">Português</span></span>
+        <b>A primeira semana na empresa</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/time-off-request.html">
+        <img src="thumbs/time-off-request.png" alt="Um pedido de férias, do Teams ao Workday" loading="lazy">
+        <span class="meta"><span></span><span class="lang">Português</span></span>
+        <b>Um pedido de férias, do Teams ao Workday</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/training-hours.html">
+        <img src="thumbs/training-hours.png" alt="Treinamento ↔ as horas do ano" loading="lazy">
+        <span class="meta"><span></span><span class="lang">Português</span></span>
+        <b>Treinamento ↔ as horas do ano</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/visual-explainer-how.html">
+        <img src="thumbs/visual-explainer-how.png" alt="visual-explainer ↔ a teacher at the board" loading="lazy">
+        <span class="meta"><span>Developer tools</span><span class="lang">English</span></span>
+        <b>visual-explainer ↔ a teacher at the board</b>
+        <span class="goal">Understand the path from a request to a self-contained HTML explainer: choices, recipe, build checks, offline player.</span>
+      </a>
+      <a class="card" href="explainers/web-cache.html">
+        <img src="thumbs/web-cache.png" alt="A cache ↔ the second page load" loading="lazy">
+        <span class="meta"><span>Web development</span><span class="lang">English</span></span>
+        <b>A cache ↔ the second page load</b>
+        <span class="goal">Follow one request through an app with a cache, and see why the hit rate decides how fast the app feels.</span>
+      </a>
+      <a class="card" href="explainers/custo-atendimento.html">
+        <img src="thumbs/custo-atendimento.png" alt="Custo por atendimento ↔ o minuto que custa" loading="lazy">
+        <span class="meta"><span>Gestão</span><span class="lang">Português</span></span>
+        <b>Custo por atendimento ↔ o minuto que custa</b>
+        <span class="goal">Ver que o custo de um atendimento é o tempo de quem atende.</span>
+      </a>
+      <a class="card" href="explainers/fila.html">
+        <img src="thumbs/fila.png" alt="Filas ↔ uma manhã na cafeteria" loading="lazy">
+        <span class="meta"><span>Sistemas</span><span class="lang">Português</span></span>
+        <b>Filas ↔ uma manhã na cafeteria</b>
+        <span class="goal">Entender que uma fila desacopla chegada e processamento, mas não cria capacidade.</span>
+      </a>
+      <a class="card" href="explainers/juros.html">
+        <img src="thumbs/juros.png" alt="Juros compostos ↔ a fatura" loading="lazy">
+        <span class="meta"><span>Matemática</span><span class="lang">Português</span></span>
+        <b>Juros compostos ↔ a fatura</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="explainers/pedido-ferias.html">
+        <img src="thumbs/pedido-ferias.png" alt="Pedido de férias ↔ do Teams ao Workday" loading="lazy">
+        <span class="meta"><span>Processos</span><span class="lang">Português</span></span>
+        <b>Pedido de férias ↔ do Teams ao Workday</b>
+        <span class="goal">Seguir um pedido do começo ao fim e ver onde ele espera.</span>
+      </a>
+      <a class="card" href="explainers/requisicao.html">
+        <img src="thumbs/requisicao.png" alt="Arquitetura web ↔ da mesa à cozinha" loading="lazy">
+        <span class="meta"><span>Sistemas</span><span class="lang">Português</span></span>
+        <b>Arquitetura web ↔ da mesa à cozinha</b>
+        <span class="goal">Acompanhar uma requisição e distinguir interface, regras do serviço e persistência.</span>
+      </a>
+      <a class="card" href="explainers/sla-rh.html">
+        <img src="thumbs/sla-rh.png" alt="SLA do RH ↔ prometer só o que se cumpre" loading="lazy">
+        <span class="meta"><span>Gestão</span><span class="lang">Português</span></span>
+        <b>SLA do RH ↔ prometer só o que se cumpre</b>
+        <span class="goal">Separar a promessa (o prazo) de quem responde por ela (o dono).</span>
+      </a>
+    </div>
+  </section>
+  <section class="how">
+    <h2>How it works</h2>
+    <img src="images/visual-explainer-how.png" alt="You ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes explainer.html">
+    <ol>
+      <li>Claude chooses the everyday thing to tie the idea to, who it is for and which number moves, and draws at once — then says what it chose and offers to change it. For a class it asks first.</li>
+      <li>It writes a short text <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
+      <li><code>scripts/build.mjs</code> checks the recipe, builds one HTML file and, with a headless browser, checks that nothing leaves the paper and no text covers another.</li>
+    </ol>
+  </section>
+  <footer>visual-explainer is MIT licensed. IBM Plex Sans (SIL Open Font License); the hand-drawn look by Rough.js, Caveat and Shantell Sans (SIL OFL).</footer>
+</main>
+</body>
+</html>

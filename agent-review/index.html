@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent-review</title>
+<meta name="description" content="Copilot Studio agents compared: what repeats, who is off the pattern, the orchestrator's contract, the telemetry and what nobody uses — with the file behind each finding. Node alone, no model.">
+<style>
+:root { --ink: #1d2330; --muted: #5f6878; --line: #e2e4e8; --page: #f6f6f3; --card: #fff; --accent: #2f5bea; --warm: #e3f3ea; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --page: #14171c; --card: #1d2129; --accent: #8fb0ff; --warm: #1c3328; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 36px; }
+h1 { margin: 0; font-size: clamp(38px, 7vw, 60px); line-height: 1; letter-spacing: -0.02em; }
+h1 span { background: var(--warm); padding: 0 .15em; border-radius: 6px; }
+h2 { margin: 0 0 12px; font-size: 22px; }
+p { margin: 0; }
+a { color: var(--accent); }
+.lead { font-size: 19px; max-width: 780px; }
+.hero { display: grid; gap: 16px; }
+.hero img, .card img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.button { display: inline-block; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; font-weight: 600; }
+.button.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); max-width: 640px; }
+.meta { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; font-weight: 600; }
+ul { margin: 0; padding-left: 20px; }
+footer { color: var(--muted); font-size: 14px; text-align: center; }
+a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1><span>cast</span>-list</h1>
+    <p class="lead">Point it at your Copilot Studio agents, cloned. See what they all do — in their YAML and in the text of their instructions — who is off it, what only one has, what the orchestrator passes on, which events they log and whether they fire, and what nobody uses: with the file and line behind every finding. Decide in Excel; the next run checks what you decided. Node alone: no model, no install, no network.</p>
+    <img src="images/rh-agents-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, a red × where the shipping specialist does not escalate and the store specialist logs no telemetry">
+    <div class="actions"><a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/dna">GitHub</a></div>
+  </section>
+  <section>
+    <h2>The example — open the map, play the explainer, download the workbook</h2>
+    <article class="card">
+      <a href="examples/rh-agents.explainer.html"><img src="images/rh-agents-explainer.png" alt="The explainer: the orchestrator calls five specialists; two carry a red ×" loading="lazy"></a>
+      <span class="meta">Português · fictional agents</span>
+      <b>RH — autoatendimento do colaborador</b>
+      <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
+      <span class="links"><a href="examples/rh-agents.html">Map</a><a href="examples/rh-agents.topology.html">Stage</a><a href="examples/rh-agents.team.html">RH</a><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/rh-agents.diagrams.md">Diagrams (Mermaid)</a><a href="examples/rh-agents.explainer.html">Explainer</a><a href="examples/rh-agents.xlsx" download>Workbook (.xlsx)</a><a href="examples/rh-agents.cast.yaml" download>Cast file (.yaml)</a></span>
+    </article>
+  </section>
+  <section>
+    <h2>What it finds — «to look at», in groups</h2>
+    <ul>
+      <li><b>Contradictions</b> — what people say and the YAML does not agree; a rule that confronts the text with the setup: «has “Only the knowledge”, but also “The model's general knowledge on”».</li>
+      <li><b>Contract and telemetry</b> — the orchestrator calling one not in the folder, a routing description of 7 characters, a flow that returns nothing, an event spelt another way («the same event?»), an event that did not fire in 30 days, one with no line in the telemetry.</li>
+      <li><b>Off pattern</b> — «1 specialist does not escalate to a person (shipping): on purpose?»; a variation of an official block, a text rule set in two ways or twice in one agent. Patterns are found per role and per type of specialist.</li>
+      <li><b>Rules</b> — from the team's profile («every specialist has a KPI»).</li>
+      <li><b>Only one has it</b> — innovation to spread, or debt to remove. Folded at first in the map.</li>
+      <li><b>Unused</b> — a topic nobody can reach, a variable nobody names, a flow nobody calls, a node switched off. Folded at first too.</li>
+      <li><b>Not understood</b> — a file it could not read is told; the rest is read anyway.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>The stage — show it in a meeting</h2>
+    <article class="card">
+      <a href="examples/rh-agents.topology.html"><img src="images/rh-agents-stage.png" alt="The cast on a stage: the orchestrator, the specialists by type, the flows and the systems, with a red arrow into shipping" loading="lazy"></a>
+      <span>The traffic moving along the arrows (each one's topic starts, from the export), lenses that light who follows a pattern and who is off, and a follow spot that walks each call of the orchestrator and stops where it breaks. Click someone for its card.</span>
+    </article>
+  </section>
+  <section>
+    <h2>The diagrams — the cast in Mermaid, for the team's docs</h2>
+    <article class="card">
+      <span><code>--diagrams</code> writes what was read as plain Mermaid: the topology, a sequence per call of the orchestrator, a lens per pattern and the anatomy of each type, in one Markdown document and one <code>.mmd</code> each. It shows on GitHub, in a wiki or in VS Code with nothing of ours, and draws in visual-explainer too.</span>
+      <span class="links"><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/rh-agents.diagrams.md">The example's diagrams, on GitHub</a></span>
+    </article>
+  </section>
+  <section>
+    <h2>The cast as people — the RH</h2>
+    <article class="card">
+      <a href="examples/rh-agents.team.html"><img src="images/rh-agents-rh.png" alt="The RH of the cast: the staff board, the org chart by type, and a résumé with its development plan" loading="lazy"></a>
+      <span>The same cast for whoever thinks in HR terms: who is being hired, who has no owner, who was never published, the post of each role and type, and a résumé each — with the development plan made of what «to look at» says about that one alone. Nothing invented: no goal, owner or number the files do not have.</span>
+    </article>
+  </section>
+  <section>
+    <h2>Bring what you already have</h2>
+    <ul>
+      <li><b>The admin center's inventory</b> or <b>the team's own spreadsheet</b> (<code>--declared</code>, CSV or .xlsx, no template): the column of the agent is found by its values, and every other column becomes what people declared — owner, KPI — with the file and line.</li>
+      <li><b>An export of Application Insights</b> (<code>--telemetry</code>): one query, ready to copy, says which events fired and how many times. Nothing goes over the network.</li>
+    </ul>
+  </section>
+  <footer>agent-review is one of the six skills of <a href="../">dna</a>. MIT. The Copilot Studio schema inside is Microsoft's (MIT).</footer>
+</main>
+</body>
+</html>

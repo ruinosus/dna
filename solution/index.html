@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>solution — solution accelerators</title>
+<meta name="description" content="A process seen by every skill, in one page: the way of working, the simulation, the journey, the drill and the agents.">
+<style>
+:root { --bg: #f6f5f2; --paper: #fff; --ink: #1d232a; --muted: #5d6670; --line: #dcdad4; --accent: #2f5d8a; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #15181c; --paper: #1e2228; --ink: #e9ecef; --muted: #a3acb6; --line: #333a42; --accent: #8db8e6; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1160px; margin: 0 auto; padding: 40px 16px 64px; display: grid; gap: 28px; }
+h1 { margin: 0; font-size: 34px; letter-spacing: -0.01em; }
+p { margin: 0; max-width: 76ch; }
+a { color: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+.card { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.card:hover { border-color: var(--ink); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card img { width: 100%; aspect-ratio: 13 / 8.2; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid var(--line); }
+.card b { font-size: 19px; }
+.meta { font-size: 13px; color: var(--muted); }
+pre { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); overflow-x: auto; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="../">← dna</a></p>
+  <h1>solution</h1>
+  <p>A solution is one process seen by every skill: the way of working, the «what if» simulation, the customer's journey, the incident drill, the Copilot Studio agents. One short <code>.solution.yaml</code> names the pieces; one page shows them all, each drawn by its own skill. Start from one of these accelerators — every number in them is made up, to be replaced with yours.</p>
+  <div class="grid">
+    <a class="card" href="examples/assistant-delivery.solution.html">
+      <img src="images/assistant-delivery.png" alt="" loading="lazy">
+      <b></b>
+      <span>Do pedido à publicação, com o gate de acerto que devolve o assistente à construção.</span>
+      <span class="meta">assistant-delivery · way, sim, blueprint, drill · português</span>
+    </a>
+    <a class="card" href="examples/employee-self-service.solution.html">
+      <img src="images/employee-self-service.png" alt="" loading="lazy">
+      <b></b>
+      <span>What employees ask the assistant, what reaches a manager or HR, and what one more HR partner or better answers would change.</span>
+      <span class="meta">employee-self-service · way, sim, blueprint, drill · English</span>
+    </a>
+    <a class="card" href="examples/service-desk.solution.html">
+      <img src="images/service-desk.png" alt="" loading="lazy">
+      <b></b>
+      <span>Do chamado do cliente ao encerramento, com os agentes do Copilot Studio que atendem antes de uma pessoa.</span>
+      <span class="meta">service-desk · way, sim, blueprint, drill, agents · português</span>
+    </a>
+  </div>
+  <pre>npx @ruinosus/dna solution --new service-desk my-desk
+npx @ruinosus/dna solution my-desk/service-desk.solution.yaml</pre>
+</main>
+</body>
+</html>

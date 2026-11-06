@@ -1,0 +1,74 @@
+flowchart LR
+  %% title Topologia · RH — autoatendimento do colaborador
+  %% agent-review 2.3.0
+  subgraph s3 ["Cliente"]
+    n1(["Cliente"])
+  end
+  subgraph s6 ["Orquestradores"]
+    n7["Orquestrador<br/><small>1840 inícios de tópico</small>"]
+  end
+  subgraph s9 ["Especialistas · transação"]
+    n2["Admissão<br/><small>290 inícios de tópico</small>"]
+    n3["Benefícios<br/><small>402 inícios de tópico</small>"]
+    n4["Férias<br/><small>610 inícios de tópico</small>"]
+  end
+  subgraph s14 ["Especialistas · orientação"]
+    n5["Facilities<br/><small>sem linha na telemetria</small>"]
+  end
+  subgraph s17 ["Especialistas · triagem"]
+    n6["Folha<br/><small>355 inícios de tópico</small>"]
+  end
+  subgraph s20 ["Fora da pasta"]
+    n8["Mobilidade<br/><small>chamado, fora da pasta</small>"]
+  end
+  subgraph s23 ["Fluxos"]
+    n9[/"Abrir caso no Workday<br/><small>fluxo</small>"/]
+    n10[/"Listar unidades<br/><small>fluxo</small>"/]
+  end
+  subgraph s27 ["Sistemas"]
+    n11[("workday.empresa.example<br/><small>HTTP</small>")]
+    n12[("Microsoft Dataverse<br/><small>conector</small>")]
+    n13[("RH Admissao MCP<br/><small>servidor MCP</small>")]
+    n14[("SharePoint<br/><small>conector</small>")]
+    n15[("Office 365 Outlook<br/><small>conector</small>")]
+    n16[("Conhecimento no SharePoint<br/><small>conhecimento</small>")]
+  end
+  n1 ==>|"1840"| n7
+  n7 ==>|"roteado por «Admissão.» · 290"| n2
+  n7 ==>|"402"| n3
+  n7 -.-> n5
+  n7 ==>|"610"| n4
+  n7 ==>|"SEM histórico · SEM «CategoriaSolicitacao» · 355"| n6
+  n7 -.->|"chama, mas não está na pasta"| n8
+  n2 -->|"não devolve nada"| n9
+  n3 --> n9
+  n5 -.->|"ninguém chama"| n10
+  n4 --> n9
+  n9 -->|"HTTP"| n11
+  n10 -.-> n12
+  n2 --> n13
+  n2 -->|"GetItems"| n14
+  n2 -->|"SendEmailV2"| n15
+  n2 --> n16
+  n3 -->|"SendEmailV2"| n15
+  n3 --> n16
+  n5 -->|"SendEmailV2"| n15
+  n5 --> n16
+  n4 -->|"SendEmailV2"| n15
+  n4 --> n16
+  n6 -->|"SendEmailV2"| n15
+  n6 --> n16
+  linkStyle 1 stroke:#b7791f,stroke-width:2px
+  linkStyle 5 stroke:#c0392b,stroke-width:2px
+  linkStyle 6 stroke:#888
+  linkStyle 7 stroke:#b7791f,stroke-width:2px
+  linkStyle 9 stroke:#888
+  linkStyle 12 stroke:#888
+  classDef bad fill:#fde2e1,stroke:#c0392b,color:#7b1d16,stroke-width:2px
+  classDef amber fill:#fff3d6,stroke:#b7791f,color:#5c3d0b,stroke-width:2px
+  classDef ok fill:#e3f4e8,stroke:#2f855a,color:#1c4532
+  classDef ghost fill:#f4f4f4,stroke:#888,color:#555,stroke-dasharray:5 4
+  classDef muted fill:#f4f4f4,stroke:#bbb,color:#666
+  class n5,n8,n10,n12 ghost
+  class n6 bad
+  class n2,n9 amber

@@ -1,0 +1,61 @@
+# What people said about the agents, and what was decided. build.mjs keeps it up to date; edit it, or fill the
+# workbook's «Declared» sheet and the «Decision» column and read it back with --from.
+apiVersion: github.com/ruinosus/dna/v1
+kind: AgentReview
+metadata:
+  name: RH — autoatendimento do colaborador
+declared:
+  # the handoff document says folha escalates; the YAML says it does not
+  - { agent: rh-folha, key: "trigger:OnEscalate", value: sim, source: "handoff da folha, seção 4" }
+  - { agent: rh-ferias, key: kpi, value: "saldo informado em até 2 trocas de mensagem", source: equipe.csv › linha 2 }
+  - { agent: rh-orquestrador, key: owner, value: rh@empresa.example, source: inventario.csv › linha 2 }
+  - { agent: rh-orquestrador, key: environment, value: RH (Produção), source: inventario.csv › linha 2 }
+  - { agent: rh-orquestrador, key: created-on, value: 2026-03-02, source: inventario.csv › linha 2 }
+  - { agent: rh-orquestrador, key: last-published, value: 2026-10-28, source: inventario.csv › linha 2 }
+  - { agent: rh-ferias, key: owner, value: ferias@empresa.example, source: inventario.csv › linha 3 }
+  - { agent: rh-ferias, key: environment, value: RH (Produção), source: inventario.csv › linha 3 }
+  - { agent: rh-ferias, key: created-on, value: 2026-03-05, source: inventario.csv › linha 3 }
+  - { agent: rh-ferias, key: last-published, value: 2026-10-21, source: inventario.csv › linha 3 }
+  - { agent: rh-beneficios, key: owner, value: beneficios@empresa.example, source: inventario.csv › linha 4 }
+  - { agent: rh-beneficios, key: environment, value: RH (Produção), source: inventario.csv › linha 4 }
+  - { agent: rh-beneficios, key: created-on, value: 2026-03-05, source: inventario.csv › linha 4 }
+  - { agent: rh-beneficios, key: last-published, value: 2026-10-14, source: inventario.csv › linha 4 }
+  - { agent: rh-folha, key: owner, value: folha@empresa.example, source: inventario.csv › linha 5 }
+  - { agent: rh-folha, key: environment, value: RH (Produção), source: inventario.csv › linha 5 }
+  - { agent: rh-folha, key: created-on, value: 2026-03-09, source: inventario.csv › linha 5 }
+  - { agent: rh-folha, key: last-published, value: 2026-09-30, source: inventario.csv › linha 5 }
+  - { agent: rh-admissao, key: environment, value: RH (Produção), source: inventario.csv › linha 6 }
+  - { agent: rh-admissao, key: created-on, value: 2026-03-12, source: inventario.csv › linha 6 }
+  - { agent: rh-admissao, key: last-published, value: 2026-10-02, source: inventario.csv › linha 6 }
+  - { agent: rh-facilities, key: owner, value: facilities@empresa.example, source: inventario.csv › linha 7 }
+  - { agent: rh-facilities, key: environment, value: RH (Produção), source: inventario.csv › linha 7 }
+  - { agent: rh-facilities, key: created-on, value: 2026-04-01, source: inventario.csv › linha 7 }
+  - { agent: rh-ferias, key: team, value: Squad Férias, source: equipe.csv › linha 2 }
+  - { agent: rh-beneficios, key: kpi, value: inclusão aberta sem atendente em 80% dos casos, source: equipe.csv › linha 3 }
+  - { agent: rh-beneficios, key: team, value: Squad Benefícios, source: equipe.csv › linha 3 }
+  - { agent: rh-folha, key: kpi, value: resposta sobre o holerite em menos de 5 s, source: equipe.csv › linha 4 }
+  - { agent: rh-folha, key: team, value: Squad Folha, source: equipe.csv › linha 4 }
+  - { agent: rh-admissao, key: kpi, value: documentos pendentes listados na primeira tentativa, source: equipe.csv › linha 5 }
+  - { agent: rh-admissao, key: team, value: Squad Admissão, source: equipe.csv › linha 5 }
+  - { agent: rh-facilities, key: team, value: Squad Facilities, source: equipe.csv › linha 6 }
+decisions:
+  - { key: "trigger:OnEscalate", status: accepted, scope: platform, why: "Ninguém fica sem saída para uma pessoa" }
+agents:
+  - { id: rh-admissao, role: specialist }
+  - { id: rh-beneficios, role: specialist }
+  - { id: rh-facilities, role: specialist }
+  - { id: rh-ferias, role: specialist }
+  - { id: rh-folha, role: specialist }
+  - { id: rh-orquestrador, role: orchestrator }
+blocks:
+  - id: abre-um-caso-no-workday
+    text: Abre um caso no Workday quando o colaborador pede uma ação que o RH precisa executar (ajuste de férias, inclusão de dependente, correção de dados).
+  - id: links
+    text: |-
+      Links:
+      - Formate links assim: [título](url), nunca a URL crua.
+      - Um link de ação vai no topo; o link da base de ajuda vai no fim.
+      - Nunca escreva as palavras «clique aqui».
+      - No máximo 3 links por resposta.
+  - id: inicializa-o-agente-quando-ele
+    text: Inicializa o agente quando ele é chamado pelo orquestrador do RH e recebe a categoria da solicitação.

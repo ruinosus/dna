@@ -1,0 +1,89 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: The orders database is almost full
+from: runbooks/database-disk.md
+about: At lunchtime the orders database disk reaches 92% and keeps growing.
+clock: "12:40"
+impact: failed orders
+roles:
+  - id: oncall
+    name: On-call engineer
+    you: true
+    can: [delete-backups]
+  - id: platform
+    name: Platform team
+    can: [grow-volume]
+  - id: support
+    name: Support lead
+    can: [tell-customers]
+start: alert
+scenes:
+  - id: alert
+    says: «orders-db disk 92%» — the alert has been firing for 4 minutes.
+    choices:
+      - label: Open the database dashboard
+        go: dashboard
+        runbook: Step 1
+        minutes: 2
+      - label: Snooze it until after lunch
+        go: full
+        minutes: 35
+        lost: 400
+  - id: dashboard
+    says: The disk grows 1% every 3 minutes. 18 GB of it are backups older than 7 days; 40 GB are write-ahead logs.
+    choices:
+      - label: Delete the old backups
+        go: breathing
+        runbook: Step 2
+        minutes: 5
+        needs: delete-backups
+      - label: Delete the write-ahead logs — they are the biggest
+        go: broken
+        minutes: 2
+        lost: 900
+      - label: Ask the platform team to grow the volume
+        go: grown
+        runbook: Step 3
+        minutes: 15
+        lost: 60
+        needs: grow-volume
+  - id: breathing
+    says: The disk is at 71%. It still grows 1% every 3 minutes — you have about an hour.
+    injects:
+      - at: "12:52"
+        says: Support — «a few customers say checkout is slow».
+    choices:
+      - label: Grow the volume now, while there is time
+        go: grown
+        runbook: Step 3
+        minutes: 15
+        needs: grow-volume
+      - label: Tell support what is going on
+        go: told
+        runbook: Step 4
+        minutes: 2
+        notifies: true
+        needs: tell-customers
+  - id: told
+    says: Support posts a note for customers. The disk is at 74%.
+    choices:
+      - label: Grow the volume
+        go: grown
+        runbook: Step 3
+        minutes: 15
+        needs: grow-volume
+  - id: grown
+    says: The volume is now twice as big. The disk is at 38%.
+    end: resolved
+  - id: broken
+    says: The database stops — without its write-ahead logs it cannot recover on its own. Orders are failing.
+    end: worse
+  - id: full
+    says: At 13:15 the disk is full and every order fails.
+    end: worse
+gaps:
+  - says: The runbook does not say who decides to grow the volume after hours, or how to reach the platform team.
+    source: Step 3
+  - says: «Tell support» comes last; nothing says when customers should hear about it.
+    source: Step 4

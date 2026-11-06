@@ -1,0 +1,28 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Folha
+  %% agent-review 2.3.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Folha
+  participant p4 as Office 365 Outlook
+  participant p5 as Conhecimento no SharePoint
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Folha.
+  Note over p2: O orquestrador encaminha para Folha.<br/>«Agente especialista em folha de pagamento: holerite, descontos e calendário de pagamento. Use quando a categoria for Folha.»
+  %% # Folha
+  %% > Folha é chamado SEM o histórico e SEM «CategoriaSolicitacao»: não sabe o que o cliente já disse.
+  p2->>p3: ⚠ Folha é chamado SEM o histórico e SEM «CategoriaSolicitacao»: não sabe o que o cliente já disse.
+  %% # Office 365 Outlook
+  %% > Usa Office 365 Outlook (SendEmailV2).
+  p3->>p4: Usa Office 365 Outlook (SendEmailV2).
+  %% # Conhecimento no SharePoint
+  %% > Consulta «Conhecimento no SharePoint».
+  p3->>p5: Consulta «Conhecimento no SharePoint».
+  %% # Orquestrador
+  %% > A resposta volta ao cliente pelo orquestrador.
+  p3-->>p2: A resposta volta ao cliente pelo orquestrador.
+  p2-->>p1: a resposta

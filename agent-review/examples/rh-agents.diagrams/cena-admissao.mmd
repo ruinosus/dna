@@ -1,0 +1,44 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Admissão
+  %% agent-review 2.3.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Admissão
+  participant p4 as Abrir caso no Workday
+  participant p5 as workday.empresa.example
+  participant p6 as RH Admissao MCP
+  participant p7 as SharePoint
+  participant p8 as Office 365 Outlook
+  participant p9 as Conhecimento no SharePoint
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Admissão por uma descrição de roteamento de 9 caracteres.
+  Note over p2: ⚠ O orquestrador encaminha para Admissão por uma descrição de roteamento de 9 caracteres.<br/>«Admissão.»
+  %% # Admissão
+  %% > Admissão recebe o histórico e «CategoriaSolicitacao».
+  p2->>p3: Admissão recebe o histórico e «CategoriaSolicitacao».
+  %% # Abrir caso no Workday
+  %% > O fluxo «Abrir caso no Workday» não devolve nada para Admissão.
+  p3->>p4: ⚠ O fluxo «Abrir caso no Workday» não devolve nada para Admissão.
+  %% # workday.empresa.example
+  %% > O fluxo chega a workday.empresa.example.
+  p4->>p5: O fluxo chega a workday.empresa.example.
+  %% # RH Admissao MCP
+  %% > Usa RH Admissao MCP.
+  p3->>p6: Usa RH Admissao MCP.
+  %% # SharePoint
+  %% > Usa SharePoint (GetItems).
+  p3->>p7: Usa SharePoint (GetItems).
+  %% # Office 365 Outlook
+  %% > Usa Office 365 Outlook (SendEmailV2).
+  p3->>p8: Usa Office 365 Outlook (SendEmailV2).
+  %% # Conhecimento no SharePoint
+  %% > Consulta «Conhecimento no SharePoint».
+  p3->>p9: Consulta «Conhecimento no SharePoint».
+  %% # Orquestrador
+  %% > A resposta volta ao cliente pelo orquestrador.
+  p3-->>p2: A resposta volta ao cliente pelo orquestrador.
+  p2-->>p1: a resposta

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>visual-pitch</title>
+<meta name="description" content="A skill that makes Claude explain anything by drawing it, for a meeting: a pitch, an architecture, a decision, data, a timeline or a story, drawn stroke by stroke in one HTML file.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #1f2a37; --muted: #667085; --line: #e4e7ec; --page: #f4f6f8; --card: #fff; --accent: #1f4e8c; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e9ecef; --muted: #a3acb6; --line: #333a42; --page: #15181c; --card: #1e2228; --accent: #8db8e6; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
+main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 40px; }
+h1 { margin: 0; font: 600 clamp(34px, 6vw, 56px)/1.1 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.02em; }
+h2 { margin: 0; font: 600 26px/1.2 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.01em; }
+p { margin: 0; }
+a { color: var(--accent); }
+.hero { display: grid; gap: 18px; justify-items: center; text-align: center; }
+.hero .lead { font-size: 20px; max-width: 720px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.button { display: inline-block; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; font-weight: 700; }
+.button.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: transform .15s, border-color .15s; }
+.card:hover { transform: translateY(-2px); border-color: var(--ink); }
+.card:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card img { width: 100%; aspect-ratio: 900 / 560; object-fit: contain; border-radius: 8px; background: #ffffff; }
+.meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.card b { font: 600 19px/1.3 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
+.note { color: var(--muted); }
+code { font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+footer { color: var(--muted); font-size: 14px; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1>visual-pitch</h1>
+    <p class="lead">Ask Claude to draw a pitch, an architecture, a decision, a number, what happened or a story — and get a clean drawing that draws itself, chapter by chapter, with a highlight at the end. One HTML file, offline.</p>
+    <div class="actions">
+      <a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a>
+      <a class="button" href="https://github.com/ruinosus/dna">GitHub</a>
+    </div>
+  </section>
+  <section>
+    <h2>One drawing per purpose — open one and press Next</h2>
+    <p class="note" style="margin: 4px 0 16px">Written by Claude with this skill; every example is fictional. To explain a concept, its sibling <a href="../visual-explainer/">visual-explainer</a> draws an explainer.</p>
+    <div class="grid">
+      <a class="card" href="drawings/pitch-hr-self-service.html">
+        <img src="thumbs/pitch-hr-self-service.png" alt="Autoatendimento de RH ↔ o RH que não vive de fila" loading="lazy">
+        <span class="meta"><span>Pitch</span><span>Português</span></span>
+        <b>Autoatendimento de RH ↔ o RH que não vive de fila</b>
+      </a>
+      <a class="card" href="drawings/arch-single-sign-on.html">
+        <img src="thumbs/arch-single-sign-on.png" alt="Login único ↔ o crachá da empresa" loading="lazy">
+        <span class="meta"><span>Architecture</span><span>Português</span></span>
+        <b>Login único ↔ o crachá da empresa</b>
+      </a>
+      <a class="card" href="drawings/decision-managed-database.html">
+        <img src="thumbs/decision-managed-database.png" alt="Banco gerenciado ou banco na máquina?" loading="lazy">
+        <span class="meta"><span>Decision</span><span>Português</span></span>
+        <b>Banco gerenciado ou banco na máquina?</b>
+      </a>
+      <a class="card" href="drawings/data-hr-tickets.html">
+        <img src="thumbs/data-hr-tickets.png" alt="Chamados de RH ↔ a pergunta que se repete" loading="lazy">
+        <span class="meta"><span>Data</span><span>Português</span></span>
+        <b>Chamados de RH ↔ a pergunta que se repete</b>
+      </a>
+      <a class="card" href="drawings/timeline-checkout-outage.html">
+        <img src="thumbs/timeline-checkout-outage.png" alt="O checkout fora do ar às 3h" loading="lazy">
+        <span class="meta"><span>Timeline</span><span>Português</span></span>
+        <b>O checkout fora do ar às 3h</b>
+      </a>
+      <a class="card" href="drawings/story-first-day.html">
+        <img src="thumbs/story-first-day.png" alt="O primeiro dia da Bia" loading="lazy">
+        <span class="meta"><span>Story</span><span>Português</span></span>
+        <b>O primeiro dia da Bia</b>
+      </a>
+    </div>
+  </section>
+  <footer>visual-pitch is MIT licensed and draws with visual-explainer's engine. IBM Plex Sans (SIL Open Font License); the hand-drawn look by Rough.js, Caveat and Shantell Sans (SIL OFL); animated emoji from Noto (CC BY 4.0), played by lottie-web (MIT).</footer>
+</main>
+</body>
+</html>

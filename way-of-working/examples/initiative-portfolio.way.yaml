@@ -1,0 +1,184 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Portfólio de iniciativas
+lanes:
+  - id: produto
+    name: Produto
+    color: prod
+  - id: arquitetura
+    name: Arquitetura
+    color: forge
+roles:
+  - id: lp
+    acronym: LP
+    name: Líder de produto
+    lane: produto
+  - id: po
+    acronym: PO
+    name: Product Owner
+    lane: produto
+  - id: an
+    acronym: AN
+    name: Analista de negócio
+    lane: produto
+  - id: arq
+    acronym: ARQ
+    name: Arquiteto de soluções
+    lane: arquitetura
+  - id: dir
+    acronym: DIR
+    name: Comitê de portfólio
+    lane: produto
+phases:
+  - id: problema
+    name: O problema
+  - id: solucao
+    name: A solução
+  - id: entrega
+    name: A entrega
+stages:
+  - id: ideia
+    name: Ideia
+    phase: problema
+    lane: produto
+    roles:
+      - lp
+      - po
+    description: Registrar a hipótese e ligar a um objetivo do ano.
+    question: Que problema ou oportunidade temos?
+    inputs:
+      - name: Pesquisa de mercado
+      - name: Objetivos do ano
+    outputs:
+      - id: hipotese
+        name: Hipótese registrada
+      - id: meta
+        name: Meta da iniciativa
+        kpi: true
+    metrics:
+      - Nº de hipóteses registradas
+      - "% ligadas a objetivos"
+  - id: descoberta
+    name: Descoberta
+    phase: problema
+    lane: produto
+    roles:
+      - lp
+      - po
+      - an
+    description: Entender o problema com quem sofre com ele.
+    question: Quais hipóteses resolvem o problema?
+    inputs:
+      - from: hipotese
+      - name: Dados de atendimento
+    outputs:
+      - id: mapa
+        name: Mapa do problema
+      - id: arvore
+        name: Árvore de oportunidades
+    metrics:
+      - Tempo médio de descoberta
+      - "% de hipóteses descartadas"
+  - id: validacao
+    name: Validação
+    phase: problema
+    lane: produto
+    roles:
+      - lp
+      - po
+      - an
+    description: Testar a hipótese com um protótipo.
+    question: A hipótese resolve o problema?
+    inputs:
+      - from: mapa
+      - from: arvore
+    outputs:
+      - id: validada
+        name: Hipótese validada com evidências
+    metrics:
+      - "% de hipóteses validadas"
+  - id: desenho
+    name: Desenho da solução
+    phase: solucao
+    lane: arquitetura
+    roles:
+      - arq
+      - po
+      - an
+    description: Desenhar a solução e mapear dependências e riscos.
+    question: Como vamos construir, e com o quê?
+    inputs:
+      - from: validada
+    outputs:
+      - id: desenho-solucao
+        name: Desenho da solução
+      - id: dependencias
+        name: Mapa de dependências
+    metrics:
+      - "% com desenho completo"
+  - id: priorizacao
+    name: Priorização
+    phase: solucao
+    lane: produto
+    roles:
+      - lp
+      - po
+      - arq
+    description: Avaliar valor, esforço e risco; preparar o pedido ao comitê.
+    question: O que vale mais neste ciclo?
+    inputs:
+      - from: desenho-solucao
+      - from: dependencias
+    outputs:
+      - id: pedido
+        name: Pedido ao comitê
+      - id: backlog
+        name: Backlog priorizado
+    metrics:
+      - Lead time de priorização
+  - id: passagem
+    name: Passagem para a entrega
+    phase: entrega
+    lane: arquitetura
+    roles:
+      - po
+      - arq
+    description: Entregar o que foi aprovado ao time que vai construir.
+    question: O time tem o que precisa para começar?
+    inputs:
+      - from: aprovados
+    outputs:
+      - id: backlog-time
+        name: Backlog inicial do time
+      - id: passagem-doc
+        name: Passagem documentada
+    metrics:
+      - "% de passagens sem retrabalho"
+gates:
+  - id: comite
+    after: priorizacao
+    name: Comitê de portfólio
+    approver: dir
+    results:
+      - id: segue
+        label: Segue
+        ok: true
+      - id: volta
+        label: Volta
+    criteria:
+      - kind: outputs
+        outputs:
+          - pedido
+          - backlog
+    on_fail: priorizacao
+    outputs:
+      - id: decisao
+        name: Decisão (segue / volta)
+      - id: aprovados
+        name: Lista de aprovados
+      - id: ata
+        name: Ata
+    metrics:
+      - Taxa de aprovação
+      - Tempo até a decisão

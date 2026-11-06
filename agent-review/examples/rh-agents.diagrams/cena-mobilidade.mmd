@@ -1,0 +1,16 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Mobilidade
+  %% agent-review 2.3.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Mobilidade
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Mobilidade.
+  Note over p2: O orquestrador encaminha para Mobilidade.<br/>«Agente especialista em mobilidade interna: vagas internas, transferências e movimentações. Use quando a categoria for Mobilidade.»
+  %% # Mobilidade
+  %% > Chama Mobilidade, que não está na pasta: não foi clonado, ou não existe mais?
+  p2-xp3: ⚠ Chama Mobilidade, que não está na pasta: não foi clonado, ou não existe mais?
