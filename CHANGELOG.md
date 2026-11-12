@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.0 — 2026-11-12
+
+way-of-working and visual-explainer: **downloads that work when the page is embedded** — seen in a portal whose
+frame blocks downloads, where the map's Excel, YAML and PNG and the explainer's PNG, SVG, GIF and WebM did nothing.
+
+- Inside an iframe, a download button hands the file to the parent page: `postMessage({type: "dna:download", id,
+  name, mime, data})`, `data` an ArrayBuffer. A parent that saves it answers `{type: "dna:download:ok", id}`.
+- With no answer in 1.5 s the page downloads it itself, so a frame that allows downloads (and a page opened on its
+  own) works as before.
+
 ## 2.4.0 — 2026-11-12
 
 way-of-working: **the map reads as a flow** — seen in a real map published in a portal, where it looked cut and

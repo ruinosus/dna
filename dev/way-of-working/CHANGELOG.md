@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 — 2026-11-12
+
+The map's downloads work when it is embedded (DNA 2.5.0): inside an iframe the Excel, YAML and PNG go to the parent
+page as a `dna:download` message, and the page downloads them itself when no parent answers.
+
 ## 0.4.0 — 2026-11-12
 
 The map reads as a flow (DNA 2.4.0): arrows between the stages, a visible cue and **Fit to width** when the map is

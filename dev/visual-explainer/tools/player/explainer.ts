@@ -546,8 +546,30 @@ export function svgText(svg: SVGSVGElement, faces: string): string {
   return new XMLSerializer().serializeToString(copy)
 }
 
+// Embedded in a page (an iframe: a portal, a wiki), a download from inside the frame is often blocked. Then the file
+// goes to the parent as {type: "dna:download", id, name, mime, data: ArrayBuffer}; a parent that saves it answers
+// {type: "dna:download:ok", id}. With no answer in 1.5 s the page downloads it itself, as when it is not embedded.
+function handOver(blob: Blob, name: string, plain: () => void) {
+  if (window.parent === window) return plain()
+  const id = Math.random().toString(36).slice(2)
+  let taken = false
+  const answer = (e: MessageEvent) => {
+    if (e.source === window.parent && e.data?.type === 'dna:download:ok' && e.data.id === id) taken = true
+  }
+  window.addEventListener('message', answer)
+  blob.arrayBuffer().then((data) =>
+    window.parent.postMessage({ type: 'dna:download', id, name, mime: blob.type, data }, '*', [data]),
+  )
+  setTimeout(() => {
+    window.removeEventListener('message', answer)
+    if (!taken) plain()
+  }, 1500)
+}
+
 function save(blob: Blob, name: string) {
-  const a = tag('a', { href: URL.createObjectURL(blob), download: name })
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  handOver(blob, name, () => {
+    const a = tag('a', { href: URL.createObjectURL(blob), download: name })
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  })
 }

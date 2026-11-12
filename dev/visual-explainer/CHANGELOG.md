@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (DNA 2.5.0)
+
+- The PNG, SVG, GIF and WebM downloads work when the explainer is embedded: inside an iframe the file goes to the
+  parent page as a `dna:download` message (`{type, id, name, mime, data}`), and the page downloads it itself when no
+  parent answers `{type: "dna:download:ok", id}` in 1.5 s.
+
 ## 0.18.1 — 2026-11-01
 
 What the first presentations in the cloud found.
