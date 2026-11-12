@@ -4,7 +4,7 @@ description: Explains an idea by drawing it — a clean explainer that draws its
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "2.4.0"
+  version: "2.5.0"
 ---
 
 # visual-explainer: explain by drawing
@@ -183,7 +183,7 @@ Give the path of the `.html` (or the file itself where the person downloads file
 and an offer to change it**: "I tied it to a credit card bill, for someone who never studied interest, with the
 monthly rate to move — want another hook, another audience or anything changed?" Then one sentence on what to look at
 ("press Next; in chapter 3, move the rate"). The file opens offline, with chapters, the values beside the paper, and
-PNG, SVG, GIF and WebM download — it can go by e-mail or on a projector.
+PNG, SVG, GIF and WebM download — it can go by e-mail or on a projector. Embedded in another page (an iframe: a portal, a wiki), where a download from inside the frame is often blocked, the PNG, SVG, GIF and WebM buttons hand the file to the parent page instead: `postMessage({type: "dna:download", id, name, mime, data})` with `data` an ArrayBuffer; a parent that saves it answers `{type: "dna:download:ok", id}`, and with no answer in 1.5 s the page downloads it itself, as it does when it is not embedded.
 
 **To present it** (a talk, a training on a projector): build with `--present` — the page opens on one chapter at a time,
 full screen and the speaker notes with the first key; a clicker's PageDown moves on. **A PowerPoint**, when asked:

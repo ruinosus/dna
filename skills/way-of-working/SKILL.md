@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing.
 metadata:
-  version: "2.4.0"
+  version: "2.5.0"
 ---
 
 # way-of-working: a team's way of working, clear and checkable
@@ -70,7 +70,7 @@ node scripts/build.mjs <id>.way.yaml --all [--lang pt] [--out <folder>]
   **Thread** (who delivers each output and who receives it).
 - `<id>.explainer.html` — **the explainer** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase; and `<id>.explainer.md`, the same explainer in a ```visual-explainer block that a Markdown preview with DNA (VS Code, Obsidian) draws.
 
-`--html`, `--xlsx` and `--explainer` make one each. A map that goes to others (a portal, a wiki) takes `--no-look`: «To look at» starts folded and the stages carry no mark. End with a short summary: what the flow is in one sentence, the files,
+`--html`, `--xlsx` and `--explainer` make one each. A map that goes to others (a portal, a wiki) takes `--no-look`: «To look at» starts folded and the stages carry no mark. Embedded in another page (an iframe: a portal, a wiki), where a download from inside the frame is often blocked, the Excel, YAML and PNG buttons hand the file to the parent page instead: `postMessage({type: "dna:download", id, name, mime, data})` with `data` an ArrayBuffer; a parent that saves it answers `{type: "dna:download:ok", id}`, and with no answer in 1.5 s the page downloads it itself, as it does when it is not embedded. End with a short summary: what the flow is in one sentence, the files,
 what is still open, and that the `.way.yaml` is the source — the one to keep in version control.
 
 ## 5. The way back: someone edited the workbook
