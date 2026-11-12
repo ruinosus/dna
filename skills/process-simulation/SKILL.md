@@ -4,7 +4,7 @@ description: Turns a process — what arrives, where it goes, who handles it, wh
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. In Claude Code (2.1.287 or later) the dna mod also checks every .sim as it is written and adds /simulate and /simulation-preview.
 metadata:
-  version: "2.3.1"
+  version: "2.4.0"
 ---
 
 # process-simulation: a process you can watch, and ask «what if»

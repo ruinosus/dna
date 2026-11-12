@@ -18,6 +18,8 @@ interface Data {
   lang: 'en' | 'pt'
   way: WayDef
   yaml: string
+  // build.mjs --no-look: «To look at» starts folded and the map marks nothing, for a map published to others
+  look?: boolean
 }
 
 const WORDS = {
@@ -27,6 +29,7 @@ const WORDS = {
     then: 'Then', approves: 'Approves', approvesAll: 'Who approves (all)', always: 'always', ifWord: 'if', nobody: 'nobody yet', criteria: 'Must be ready', onFail: 'If not', back: 'back to', after: 'After', results: 'Results',
     pick: 'Pick a stage or a gate on the map to see it whole.', summary: (s: number, g: number, r: number) => `${s} ${s === 1 ? 'stage' : 'stages'} · ${g} ${g === 1 ? 'gate' : 'gates'} · ${r} ${r === 1 ? 'role' : 'roles'}`,
     stages: 'Stages', stage2: 'Stage', description: 'Description', roles: 'Roles', metrics: 'Metrics', outside: 'from outside', comesOut: 'What comes out', nobodyTakes: 'nobody receives it',
+    fit: 'Fit to width', more: 'Scroll sideways for the rest →', approvesHere: 'approves', approveMany: 'approve', legendNext: 'the order of the stages', legendGate: 'gate, and who approves it', legendLook: 'to look at', legendOptional: 'optional stage',
   },
   pt: {
     map: 'Mapa', excel: 'Excel', yaml: 'YAML', png: 'PNG', look: 'Para olhar', stage: 'Etapa', gate: 'Gate', optional: 'opcional',
@@ -34,6 +37,7 @@ const WORDS = {
     then: 'Depois', approves: 'Aprova', approvesAll: 'Quem aprova (todos)', always: 'sempre', ifWord: 'se', nobody: 'ninguém ainda', criteria: 'Precisa estar pronto', onFail: 'Se não', back: 'volta para', after: 'Depois de', results: 'Resultados',
     pick: 'Escolha uma etapa ou um gate no mapa para ver inteiro.', summary: (s: number, g: number, r: number) => `${s} ${s === 1 ? 'etapa' : 'etapas'} · ${g} ${g === 1 ? 'gate' : 'gates'} · ${r} ${r === 1 ? 'papel' : 'papéis'}`,
     stages: 'Etapas', stage2: 'Etapa', description: 'Descrição', roles: 'Papéis', metrics: 'Métricas', outside: 'de fora', comesOut: 'O que sai', nobodyTakes: 'ninguém recebe',
+    fit: 'Caber na largura', more: 'Role para o lado para ver o resto →', approvesHere: 'aprova', approveMany: 'aprovam', legendNext: 'a ordem das etapas', legendGate: 'gate, e quem aprova', legendLook: 'para olhar', legendOptional: 'etapa opcional',
   },
 }
 // The lanes' ink, by the colours the workbook fills them with.
@@ -46,6 +50,7 @@ const w = WORDS[lang]
 const gates = way.gates ?? []
 const roles = way.roles ?? []
 const looks = reviewWay(way)
+const showLook = data.look !== false
 const sheets = workbookOf(name, way, lang)
 const thread = threadOf(way)
 document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
@@ -86,7 +91,14 @@ const linked = (): Set<string> => {
   const makers = way.stages.filter((s) => (s.outputs ?? []).some((o) => checks.includes(o.id))).map((s) => s.id)
   return new Set([...(thread.inputs[id] ?? []).map((x) => x.from).filter((x): x is string => !!x), ...makers, ...own.flatMap((o) => thread.receivers[o.id] ?? [])])
 }
-const flagged = (at: Look['at']) => looks.some((l) => l.at && Object.entries(at ?? {}).every(([k, v]) => (l.at as Record<string, string>)[k] === v))
+const flagged = (at: Look['at']) => showLook && looks.some((l) => l.at && Object.entries(at ?? {}).every(([k, v]) => (l.at as Record<string, string>)[k] === v))
+const lookText = (at: Look['at']) =>
+  looks.filter((l) => l.at && Object.entries(at ?? {}).every(([k, v]) => (l.at as Record<string, string>)[k] === v)).map((l) => l[lang]).join(' · ')
+// The arrows between stages: the way's own `next` links, or one stage after another.
+const nexts = (): [string, string][] => {
+  const own = (way.links ?? []).filter((l) => l.kind === 'next')
+  return own.length ? own.map((l) => [l.source, l.target]) : way.stages.slice(1).map((s, i) => [way.stages[i].id, s.id])
+}
 // What a gate checks, as the workbook writes it (one line each).
 const criteriaOf = (g: WayGate) => {
   const sheet = sheets.find((s) => s.key === 'gates')!
@@ -98,6 +110,7 @@ const criteriaOf = (g: WayGate) => {
 type Tab = 'map' | 'stages' | 'roles' | 'gates' | 'outputs'
 let tab: Tab = 'map'
 let picked: { stage?: string; gate?: string } = {}
+let fit = false
 const app = document.getElementById('app')!
 
 function render() {
@@ -106,10 +119,10 @@ function render() {
     <header><h1 class="sd-title">${esc(name)}</h1><p class="sd-sub">${esc(way.phases.map((p) => p.name).join(' → '))} · ${w.summary(way.stages.length, gates.length, roles.length)}</p></header>
     <div class="sd-bar" role="tablist">${tabs.map(([k, t]) => `<button class="sd-tab" role="tab" aria-selected="${k === tab}" data-tab="${k}">${esc(t)}</button>`).join('')}
       <span class="sd-space"></span>
-      <button class="sd-get" data-get="xlsx">⬇ ${w.excel}</button><button class="sd-get" data-get="yaml">⬇ ${w.yaml}</button>${tab === 'map' ? `<button class="sd-get" data-get="png">⬇ ${w.png}</button>` : ''}
+      ${tab === 'map' ? `<button class="sd-get" data-fit aria-pressed="${fit}">${w.fit}</button>` : ''}<button class="sd-get" data-get="xlsx">⬇ ${w.excel}</button><button class="sd-get" data-get="yaml">⬇ ${w.yaml}</button>${tab === 'map' ? `<button class="sd-get" data-get="png">⬇ ${w.png}</button>` : ''}
     </div>
-    ${looks.length ? `<section class="sd-look"><h2>${w.look}</h2><ul>${looks.map((l, i) => `<li><button data-look="${i}">${esc(l[lang])}</button></li>`).join('')}</ul></section>` : ''}
-    ${tab === 'map' ? `<div class="sd-body"><section class="sd-board">${grid()}</section><aside class="sd-detail" aria-live="polite">${detail()}</aside></div>` : tab === 'stages' ? stagesTable() : table(sheetOf(tab))}
+    ${looks.length ? `<details class="sd-look"${showLook ? ' open' : ''}><summary><h2>${w.look} · ${looks.length}</h2></summary><ul>${looks.map((l, i) => `<li><button data-look="${i}">${esc(l[lang])}</button></li>`).join('')}</ul></details>` : ''}
+    ${tab === 'map' ? `<div class="sd-body"><div class="sd-main"><div class="sd-boardwrap"><section class="sd-board" tabindex="0" aria-label="${esc(w.map)}">${grid()}</section><p class="sd-more" aria-hidden="true">${w.more}</p></div>${legend()}</div><aside class="sd-detail" aria-live="polite">${detail()}</aside></div>` : tab === 'stages' ? stagesTable() : table(sheetOf(tab))}
   </div>`
 }
 
@@ -124,12 +137,12 @@ function grid() {
     else runs.push({ phase: s.phase, span: 1 })
   }
   const near = linked()
-  let html = `<div class="sd-grid" style="grid-template-columns: 104px repeat(${n}, minmax(128px, 1fr)); min-width: ${104 + n * 136}px">`
+  let html = `<div class="sd-grid" style="grid-template-columns: 104px repeat(${n}, minmax(128px, 1fr)); min-width: ${104 + n * 144}px"><svg class="sd-wires" aria-hidden="true"></svg>`
   html += '<div></div>' + runs.map((r) => `<div class="sd-phase" style="grid-column: span ${r.span}">${esc(way.phases.find((p) => p.id === r.phase)?.name ?? r.phase)}</div>`).join('')
   for (const lane of way.lanes) {
     const ink = INKS[colorOf(lane.id)]
     html += `<div class="sd-lane" style="color:${ink}">${esc(lane.name)}${lane.sub ? `<small>${esc(lane.sub)}</small>` : ''}</div>`
-    for (const s of way.stages) html += `<div class="sd-cell">${s.lane === lane.id ? stageCard(s, ink, near) : ''}</div>`
+    for (const s of way.stages) html += `<div class="sd-cell">${s.lane === lane.id ? stageCard(s, ink, near) : approverMark(s, lane.id, near)}</div>`
   }
   return html + '</div>'
 }
@@ -137,7 +150,7 @@ function grid() {
 function stageCard(s: WayStage, ink: string, near: Set<string>) {
   const g = gateAfter(s.id)
   const cls = ['sd-stage', s.optional ? 'optional' : '', flagged({ stage: s.id }) ? 'flag' : '', picked.stage === s.id ? 'sd-picked' : near.has(s.id) ? 'sd-linked' : ''].filter(Boolean).join(' ')
-  const card = `<button class="${cls}" style="--lane:${ink}" data-stage="${esc(s.id)}"><b>${esc(s.name)}</b>${(s.roles ?? []).length ? `<span>${esc((s.roles ?? []).map(acronym).join(', '))}</span>` : ''}${s.where ? `<span class="sd-where">${w.where.toLowerCase()}: ${esc(s.where)}</span>` : ''}</button>`
+  const card = `<button class="${cls}" style="--lane:${ink}" data-stage="${esc(s.id)}"${flagged({ stage: s.id }) ? ` title="${esc(`${w.look}: ${lookText({ stage: s.id })}`)}"` : ''}><b>${esc(s.name)}</b>${(s.roles ?? []).length ? `<span>${esc((s.roles ?? []).map(acronym).join(', '))}</span>` : ''}${s.where ? `<span class="sd-where">${w.where.toLowerCase()}: ${esc(s.where)}</span>` : ''}</button>`
   if (!g) return card
   const gcls = ['sd-gate', flagged({ gate: g.id }) ? 'flag' : '', picked.gate === g.id ? 'sd-picked' : near.has(g.id) ? 'sd-linked' : ''].filter(Boolean).join(' ')
   // Spec 2026-11-02 (aprovações no gate): who always approves after the name; each that approves only when something
@@ -146,6 +159,31 @@ function stageCard(s: WayStage, ink: string, near: Set<string>) {
   const always = all.filter((a) => !a.when).map((a) => acronym(a.by))
   const when = all.filter((a) => a.when).map((a) => `<small class="sd-also">+ ${esc(acronym(a.by))} <span class="sd-where">${w.ifWord} ${esc(a.when!)}</span></small>`).join('')
   return `${card}<button class="${gcls}" data-gate="${esc(g.id)}"><i></i><span>${esc(g.name)}${always.length ? ` <em>· ${esc(always.join(', '))}</em>` : ''}${when}</span></button>`
+}
+
+// A gate shown again in the lane of a role that approves it, when that lane does not lead the stage it closes: a lane
+// that only approves is not left empty.
+function approverMark(s: WayStage, lane: string, near: Set<string>) {
+  const g = gateAfter(s.id)
+  if (!g || s.lane === lane) return ''
+  const here = approvalsOf(g).filter((a) => roles.find((r) => r.id === a.by)?.lane === lane)
+  if (!here.length) return ''
+  // who always approves, then each who approves only when something holds, as under the stage
+  const always = here.filter((a) => !a.when).map((a) => acronym(a.by))
+  const who = here.map((a) => acronym(a.by)).join(', ')
+  const verb = always.length > 1 ? w.approveMany : w.approvesHere
+  const when = here.filter((a) => a.when).map((a) => `<small class="sd-also">+ ${esc(acronym(a.by))} <span class="sd-where">${w.ifWord} ${esc(a.when!)}</span></small>`).join('')
+  const cls = ['sd-gate', 'sd-approve', picked.gate === g.id ? 'sd-picked' : near.has(g.id) ? 'sd-linked' : ''].filter(Boolean).join(' ')
+  return `<button class="${cls}" data-gate="${esc(g.id)}" aria-label="${esc(`${who}: ${g.name}`)}"><i></i><span>${esc(g.name)}${always.length ? ` <em>· ${esc(always.join(', '))} ${verb}</em>` : ''}${when}</span></button>`
+}
+
+// What the map's marks mean, only those it has.
+function legend() {
+  const items = [`<span><svg width="22" height="10" aria-hidden="true"><path d="M1 5 H16" stroke="currentColor" stroke-width="1.5"/><path d="M15 1.5 L21 5 L15 8.5 Z" fill="currentColor"/></svg> ${w.legendNext}</span>`]
+  if (gates.length) items.push(`<span><i class="sd-lg-gate"></i> ${w.legendGate}</span>`)
+  if (showLook && looks.some((l) => l.at?.stage || l.at?.gate)) items.push(`<span><i class="sd-lg-look"></i> ${w.legendLook}</span>`)
+  if (way.stages.some((s) => s.optional)) items.push(`<span><i class="sd-lg-opt"></i> ${w.legendOptional}</span>`)
+  return `<p class="sd-legend">${items.join('')}</p>`
 }
 
 const list = (xs: string[]) => esc(xs.join(' · '))
@@ -216,8 +254,11 @@ function save(blob: Blob, file: string) {
 // that (Safari) gets the SVG itself.
 async function png() {
   const el = app.querySelector('.sd-grid') as HTMLElement
+  const zoom = el.style.zoom
+  el.style.zoom = ''
   const [width, height] = [el.scrollWidth + 32, el.scrollHeight + 32]
-  const inner = new XMLSerializer().serializeToString(el).replace(/ sd-picked/g, '')
+  el.style.zoom = zoom
+  const inner = new XMLSerializer().serializeToString(el).replace(/ sd-picked/g, '').replace(/ ?zoom: [^;"]*;?/, '')
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="sd light" style="min-height:0;padding:16px;background:#fff;width:${width}px"><style>${__MAP_CSS__}</style>${inner}</div></foreignObject></svg>`
   const blob = new Blob([svg], { type: 'image/svg+xml' })
   try {
@@ -238,11 +279,65 @@ async function png() {
   }
 }
 
+// The arrows, drawn over the grid once it is laid out (and again when its size changes): from the right of a stage to
+// the left of the next, square corners in the gap between the columns. Offsets, not screen boxes, so «fit» (zoom) and
+// the PNG keep them in place.
+function wires() {
+  const grid = app.querySelector('.sd-grid') as HTMLElement | null
+  const svg = grid?.querySelector('.sd-wires') as SVGSVGElement | null
+  if (!grid || !svg) return
+  const box = (id: string) => {
+    const el = grid.querySelector(`[data-stage="${CSS.escape(id)}"]`) as HTMLElement | null
+    if (!el) return null
+    let [x, y, at] = [0, 0, el as HTMLElement | null]
+    while (at && at !== grid) {
+      x += at.offsetLeft
+      y += at.offsetTop
+      at = at.offsetParent as HTMLElement | null
+    }
+    return { x, y, w: el.offsetWidth, h: el.offsetHeight }
+  }
+  const [W, H] = [grid.scrollWidth, grid.scrollHeight]
+  svg.setAttribute('width', String(W))
+  svg.setAttribute('height', String(H))
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
+  const id = picked.stage
+  const paths = nexts().map(([a, b]) => {
+    const [p, q] = [box(a), box(b)]
+    if (!p || !q) return ''
+    const [x1, y1, x2, y2] = [p.x + p.w, p.y + Math.min(p.h / 2, 22), q.x, q.y + Math.min(q.h / 2, 22)]
+    if (x2 <= x1) return ''
+    const mx = Math.round((x1 + x2) / 2)
+    const d = y1 === y2 ? `M${x1} ${y1} H${x2 - 1}` : `M${x1} ${y1} H${mx} V${y2} H${x2 - 1}`
+    return `<path class="${id && (a === id || b === id) ? 'on' : ''}" d="${d}" marker-end="url(#sd-arrow)"/>`
+  })
+  svg.innerHTML = `<defs><marker id="sd-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="currentColor"/></marker></defs>${paths.join('')}`
+}
+
+// When the map is wider than the board: «fit» zooms it to the width; otherwise a fade and a line say there is more.
+function layout() {
+  const board = app.querySelector('.sd-board') as HTMLElement | null
+  const grid = app.querySelector('.sd-grid') as HTMLElement | null
+  if (!board || !grid) return
+  grid.style.zoom = ''
+  const room = board.clientWidth - 32
+  if (fit && grid.scrollWidth > room) grid.style.zoom = String(Math.max(0.45, room / grid.scrollWidth))
+  const more = !fit && board.scrollWidth > board.clientWidth + 4
+  const end = board.scrollLeft + board.clientWidth >= board.scrollWidth - 4
+  board.parentElement!.classList.toggle('sd-overflow', more && !end)
+  wires()
+}
+new ResizeObserver(() => layout()).observe(app)
+app.addEventListener('scroll', (e) => {
+  if ((e.target as HTMLElement).classList?.contains('sd-board')) layout()
+}, true)
+
 app.addEventListener('click', (e) => {
   const t = (e.target as HTMLElement).closest('button')
   if (!t) return
   const d = t.dataset
-  if (d.tab) tab = d.tab as Tab
+  if (d.fit !== undefined) fit = !fit
+  else if (d.tab) tab = d.tab as Tab
   else if (d.stage || d.gate) {
     picked = d.stage ? { stage: d.stage } : { gate: d.gate }
     tab = 'map'
@@ -253,8 +348,9 @@ app.addEventListener('click', (e) => {
   } else if (d.get === 'xlsx') return save(new Blob([xlsx(sheets)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${data.id}.xlsx`)
   else if (d.get === 'yaml') return save(new Blob([data.yaml], { type: 'text/yaml' }), `${data.id}.way.yaml`)
   else if (d.get === 'png') return void png()
-  const focus = d.tab ? `[data-tab="${d.tab}"]` : d.stage ? `[data-stage="${d.stage}"]` : d.gate ? `[data-gate="${d.gate}"]` : undefined
+  const focus = d.fit !== undefined ? '[data-fit]' : d.tab ? `[data-tab="${d.tab}"]` : d.stage ? `[data-stage="${d.stage}"]` : d.gate ? `[data-gate="${d.gate}"]` : undefined
   render()
+  layout()
   if (focus) (app.querySelector(focus) as HTMLElement | null)?.focus()
   if (d.look) app.querySelector('.sd-picked')?.scrollIntoView({ block: 'nearest', inline: 'center' })
   // the detail beside the map on a wide screen, under it otherwise: brought into view when it is under
@@ -262,3 +358,4 @@ app.addEventListener('click', (e) => {
 })
 
 render()
+layout()

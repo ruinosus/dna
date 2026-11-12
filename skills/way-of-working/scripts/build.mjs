@@ -4,11 +4,12 @@
 // changed is read as the changes it proposes, one per line, and only the ones taken go into the .way.yaml.
 //
 //   node build.mjs <id>.way.yaml --check [--lang en|pt]                       only check it: nothing is written
-//   node build.mjs <id>.way.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <id>.way.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>] [--no-look]
 //   node build.mjs <id>.way.yaml --from <edited.xlsx> [--lang en|pt]           the changes, each with its key
 //   node build.mjs <id>.way.yaml --from <edited.xlsx> --take <key,key…|all>    writes the ones taken into the .way.yaml
 //
-// With no --html/--xlsx/--explainer it makes the map. Files go beside the .way.yaml (or in --out), named by its id.
+// With no --html/--xlsx/--explainer it makes the map. --no-look: a map to publish — «To look at» starts folded and the
+// stages carry no mark (the check still prints it). Files go beside the .way.yaml (or in --out), named by its id.
 // Exit codes: 0 done (what to look at is printed, and is not an error); 1 the file breaks the format (each problem with
 // its line; nothing written); 2 bad arguments; 3 made, but the explainer's reviewer found something to fix. Needs Node 18
 // or later and nothing else; the explainer's review uses Chrome, Chromium or Edge when there is one.
@@ -31,10 +32,10 @@ const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
-const flags = new Set(['--check', '--json', '--html', '--xlsx', '--explainer', '--all', '--write', '--force', '--upgrade', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--explainer', '--all', '--write', '--force', '--upgrade', '--no-look', ...valued])
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <id>.way.yaml --check [--json] [--lang en|pt]
-       node build.mjs <id>.way.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>]
+       node build.mjs <id>.way.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>] [--no-look]
        node build.mjs <id>.way.yaml --from <edited.xlsx> [--take <key,key…|all>]
        node build.mjs <id>.way.yaml --lens sim|blueprint|drill [--gate <id>] [--lang en|pt] [--write [--force]] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
@@ -198,7 +199,7 @@ const asset = (f) => readFileSync(join(here, '../assets', f), 'utf8')
 
 if (want.html) {
   const page = join(out, `${id}.html`)
-  writeFileSync(page, fill(asset('map.html'), { WAY: inline({ id, name, lang, way, yaml: source }) }))
+  writeFileSync(page, fill(asset('map.html'), { WAY: inline({ id, name, lang, way, yaml: source, ...(argv.includes('--no-look') && { look: false }) }) }))
   console.log(`✓ map       ${page}`)
 }
 if (want.xlsx) {

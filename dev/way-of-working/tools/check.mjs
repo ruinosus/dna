@@ -106,7 +106,9 @@ else {
   else {
     run(join(examples, 'feature-delivery.way.yaml'), '--lang', 'pt', '--out', work)
     const html = readFileSync(join(work, 'feature-delivery.html'), 'utf8').replace('</body>', `<script>setTimeout(() => { const q = (s) => document.querySelector(s); const out = {}
-      const g = q('[data-gate="producao-gate"]'); out.gate = g?.textContent.replace(/\\s+/g, ' ').trim(); g?.click()
+      const g = q('.sd-gate:not(.sd-approve)[data-gate="producao-gate"]'); out.gate = g?.textContent.replace(/\\s+/g, ' ').trim()
+      out.marks = [...document.querySelectorAll('.sd-approve[data-gate="producao-gate"]')].map((x) => x.textContent.replace(/\\s+/g, ' ').trim())
+      out.wires = document.querySelectorAll('.sd-wires > path').length; g?.click()
       setTimeout(() => { out.approvals = [...document.querySelectorAll('.sd-approval')].map((x) => x.textContent.replace(/\\s+/g, ' ').trim())
         // as the side panel of a wide screen (300 px), with a long condition: nothing goes past the card's edge
         const d = q('.sd-detail'); d.style.width = '300px'; d.style.boxSizing = 'border-box'
@@ -117,6 +119,8 @@ else {
     writeFileSync(join(work, 'probe.html'), html)
     const p = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? {}
     ok(p.gate === 'Pronto para produção? · TL+ SEG se mudança em pagamento' && p.approvals?.length === 2 && p.approvals[0] === 'TL Tech Lead sempre' && p.approvals[1] === 'SEG Segurança se mudança em pagamento', 'the map: the gate and its two approvals', JSON.stringify(p))
+    // 2.4.0: the same gate again in the row of whoever approves it (TL and SEG lead no stage there), and arrows between the stages
+    ok(p.marks?.length === 1 && p.marks[0].startsWith('Pronto para produção? · TL aprova') && p.wires === 6, 'the map: the gate in the approvers\' row, and an arrow between each two stages', JSON.stringify(p))
     ok(Array.isArray(p.spills) && !p.spills.length, 'the gate in the side panel (300 px): its approvals and a long condition wrap inside the card', JSON.stringify(p.spills))
   }
 }

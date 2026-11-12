@@ -28,7 +28,9 @@ body { margin: 0; }
 .sd-get:hover, .sd-tab:hover { border-color: var(--muted); }
 
 .sd-look { background: var(--look-bg); border-radius: 10px; padding: 10px 14px; }
-.sd-look h2 { margin: 0 0 4px; font-size: 13px; color: var(--look); letter-spacing: .04em; text-transform: uppercase; }
+.sd-look summary { cursor: pointer; color: var(--look); }
+.sd-look h2 { display: inline; margin: 0; font-size: 13px; color: var(--look); letter-spacing: .04em; text-transform: uppercase; }
+.sd-look[open] ul { margin-top: 4px; }
 .sd-look ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .sd-look button { background: none; border: 0; padding: 2px 0; text-align: left; }
 .sd-look button:hover { text-decoration: underline; }
@@ -36,8 +38,33 @@ body { margin: 0; }
 .sd-wrap > * { min-width: 0; }
 .sd-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (min-width: 1600px) { .sd-body { grid-template-columns: minmax(0, 1fr) 300px; } }
-.sd-board { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
-.sd-grid { display: grid; gap: 8px; align-items: start; background: var(--card); }
+.sd-main { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.sd-boardwrap { position: relative; min-width: 0; }
+.sd-board { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: var(--muted) transparent; }
+/* a scrollbar that stays visible where the system hides it until you scroll (macOS) */
+.sd-board::-webkit-scrollbar { height: 10px; }
+.sd-board::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; border: 2px solid var(--card); }
+.sd-board::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+/* more to the right: the edge fades and a line says so */
+.sd-boardwrap::after { content: ""; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 56px; border-radius: 0 12px 12px 0;
+  background: linear-gradient(to right, transparent, var(--card)); pointer-events: none; opacity: 0; transition: opacity .15s; }
+.sd-more { display: none; position: absolute; right: 14px; bottom: 8px; margin: 0; padding: 2px 10px; border-radius: 999px;
+  background: var(--active); color: var(--on-active); font-size: 12px; pointer-events: none; z-index: 2; }
+.sd-overflow::after { opacity: 1; }
+.sd-overflow .sd-more { display: block; }
+.sd-grid { position: relative; display: grid; gap: 8px 16px; align-items: start; background: var(--card); }
+/* the arrows between the stages, under the cards */
+.sd-wires { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; color: var(--muted); z-index: 0; }
+.sd-wires path { fill: none; stroke: currentColor; stroke-width: 1.6; opacity: .8; }
+.sd-wires path.on { color: var(--focus); stroke: var(--focus); opacity: 1; stroke-width: 2; }
+.sd-grid > :not(.sd-wires) { position: relative; z-index: 1; }
+.sd-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: 12px; }
+.sd-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sd-legend svg { color: var(--muted); }
+.sd-lg-gate { width: 10px; height: 10px; transform: rotate(45deg); border: 2px solid var(--gate); background: var(--gate-bg); }
+.sd-lg-look { width: 9px; height: 9px; border-radius: 50%; background: var(--look); }
+.sd-lg-opt { width: 18px; height: 10px; border: 1.5px dashed var(--muted); border-radius: 3px; }
 .sd-phase { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); padding-bottom: 4px; }
 .sd-lane { font-size: 13px; font-weight: 700; padding-top: 8px; }
 .sd-lane small { display: block; font-weight: 400; color: var(--muted); }
@@ -48,10 +75,14 @@ body { margin: 0; }
 .sd-stage .sd-where { color: var(--look); font-size: 11px; }
 .sd-stage.optional { border-style: dashed; }
 .sd-stage.flag::after { content: ""; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--look); }
-.sd-gate { display: flex; align-items: center; gap: 7px; background: none; border: 0; padding: 0 2px; text-align: left; font-size: 12px; color: var(--gate); }
-.sd-gate i { flex: none; width: 12px; height: 12px; transform: rotate(45deg); border: 2px solid var(--gate); background: var(--gate-bg); }
+.sd-gate { display: flex; align-items: flex-start; gap: 7px; background: none; border: 0; padding: 0 2px; text-align: left; font-size: 12px; color: var(--gate); }
+.sd-gate i { flex: none; margin-top: 3px; width: 12px; height: 12px; transform: rotate(45deg); border: 2px solid var(--gate); background: var(--gate-bg); }
 .sd-gate.flag i { border-style: dashed; }
-.sd-gate em { font-style: normal; color: var(--muted); }
+.sd-gate em { display: block; font-style: normal; color: var(--muted); }
+.sd-gate span { min-width: 0; }
+/* the gate again in the lane of whoever approves it */
+.sd-approve { opacity: .9; }
+.sd-approve i { background: var(--card); border-style: solid; }
 .sd-gate .sd-also { display: block; color: var(--muted); font-size: 11px; }
 .sd-gate .sd-where, .sd-approval .sd-where { color: var(--look); }
 .sd-approval { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; padding: 3px 0; border-top: 1px solid var(--line); }
