@@ -4,7 +4,7 @@ description: Compares a team's Copilot Studio agents with each other, from the f
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
 ---
 
 # agent-review: what the agents have in common, and who is off it

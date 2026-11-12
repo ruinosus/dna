@@ -29,7 +29,7 @@ const WORDS = {
     then: 'Then', approves: 'Approves', approvesAll: 'Who approves (all)', always: 'always', ifWord: 'if', nobody: 'nobody yet', criteria: 'Must be ready', onFail: 'If not', back: 'back to', after: 'After', results: 'Results',
     pick: 'Pick a stage or a gate on the map to see it whole.', summary: (s: number, g: number, r: number) => `${s} ${s === 1 ? 'stage' : 'stages'} · ${g} ${g === 1 ? 'gate' : 'gates'} · ${r} ${r === 1 ? 'role' : 'roles'}`,
     stages: 'Stages', stage2: 'Stage', description: 'Description', roles: 'Roles', metrics: 'Metrics', outside: 'from outside', comesOut: 'What comes out', nobodyTakes: 'nobody receives it',
-    fit: 'Fit to width', more: 'Scroll sideways for the rest →', approvesHere: 'approves', approveMany: 'approve', legendNext: 'the order of the stages', legendGate: 'gate, and who approves it', legendLook: 'to look at', legendOptional: 'optional stage',
+    fit: 'Fit to width', more: 'Scroll sideways for the rest →', approvesHere: 'approves', approveMany: 'approve', legendNext: 'the order of the stages', legendGate: 'gate, and who approves it', legendLook: 'to look at', legendOptional: 'optional stage', ritual: 'Ritual',
   },
   pt: {
     map: 'Mapa', excel: 'Excel', yaml: 'YAML', png: 'PNG', look: 'Para olhar', stage: 'Etapa', gate: 'Gate', optional: 'opcional',
@@ -37,7 +37,7 @@ const WORDS = {
     then: 'Depois', approves: 'Aprova', approvesAll: 'Quem aprova (todos)', always: 'sempre', ifWord: 'se', nobody: 'ninguém ainda', criteria: 'Precisa estar pronto', onFail: 'Se não', back: 'volta para', after: 'Depois de', results: 'Resultados',
     pick: 'Escolha uma etapa ou um gate no mapa para ver inteiro.', summary: (s: number, g: number, r: number) => `${s} ${s === 1 ? 'etapa' : 'etapas'} · ${g} ${g === 1 ? 'gate' : 'gates'} · ${r} ${r === 1 ? 'papel' : 'papéis'}`,
     stages: 'Etapas', stage2: 'Etapa', description: 'Descrição', roles: 'Papéis', metrics: 'Métricas', outside: 'de fora', comesOut: 'O que sai', nobodyTakes: 'ninguém recebe',
-    fit: 'Caber na largura', more: 'Role para o lado para ver o resto →', approvesHere: 'aprova', approveMany: 'aprovam', legendNext: 'a ordem das etapas', legendGate: 'gate, e quem aprova', legendLook: 'para olhar', legendOptional: 'etapa opcional',
+    fit: 'Caber na largura', more: 'Role para o lado para ver o resto →', approvesHere: 'aprova', approveMany: 'aprovam', legendNext: 'a ordem das etapas', legendGate: 'gate, e quem aprova', legendLook: 'para olhar', legendOptional: 'etapa opcional', ritual: 'Ritual',
   },
 }
 // The lanes' ink, by the colours the workbook fills them with.
@@ -107,7 +107,7 @@ const criteriaOf = (g: WayGate) => {
   return String(typeof cell === 'object' ? cell.v : (cell ?? '')).split('\n').filter(Boolean)
 }
 
-type Tab = 'map' | 'stages' | 'roles' | 'gates' | 'outputs'
+type Tab = 'map' | 'stages' | 'roles' | 'gates' | 'outputs' | 'rituals' | 'agreements'
 let tab: Tab = 'map'
 let picked: { stage?: string; gate?: string } = {}
 let fit = false
@@ -115,6 +115,8 @@ const app = document.getElementById('app')!
 
 function render() {
   const tabs: [Tab, string][] = [['map', w.map], ['stages', w.stages], ['roles', sheetOf('roles').name], ['gates', sheetOf('gates').name], ['outputs', sheetOf('outputs').name]]
+  // the way's rituals and agreements, when it has them: the workbook's own sheets
+  for (const k of ['rituals', 'agreements'] as const) if (sheets.some((s) => s.key === k)) tabs.push([k, sheetOf(k).name])
   app.innerHTML = `<div class="sd-wrap">
     <header><h1 class="sd-title">${esc(name)}</h1><p class="sd-sub">${esc(way.phases.map((p) => p.name).join(' → '))} · ${w.summary(way.stages.length, gates.length, roles.length)}</p></header>
     <div class="sd-bar" role="tablist">${tabs.map(([k, t]) => `<button class="sd-tab" role="tab" aria-selected="${k === tab}" data-tab="${k}">${esc(t)}</button>`).join('')}
@@ -147,10 +149,16 @@ function grid() {
   return html + '</div>'
 }
 
+// The rituals that serve a stage or a gate: a small mark on it, their names in its title.
+const ritualMark = (at: { stage?: string; gate?: string }) => {
+  const xs = (way.rituals ?? []).filter((r) => (at.stage && r.stage === at.stage) || (at.gate && r.gate === at.gate))
+  return xs.length ? `<span class="sd-rit" title="${esc(`${w.ritual}: ${xs.map((r) => `${r.name}${r.cadence ? ` (${r.cadence})` : ''}`).join(', ')}`)}">◷ ${esc(xs.map((r) => r.name).join(', '))}</span>` : ''
+}
+
 function stageCard(s: WayStage, ink: string, near: Set<string>) {
   const g = gateAfter(s.id)
   const cls = ['sd-stage', s.optional ? 'optional' : '', flagged({ stage: s.id }) ? 'flag' : '', picked.stage === s.id ? 'sd-picked' : near.has(s.id) ? 'sd-linked' : ''].filter(Boolean).join(' ')
-  const card = `<button class="${cls}" style="--lane:${ink}" data-stage="${esc(s.id)}"${flagged({ stage: s.id }) ? ` title="${esc(`${w.look}: ${lookText({ stage: s.id })}`)}"` : ''}><b>${esc(s.name)}</b>${(s.roles ?? []).length ? `<span>${esc((s.roles ?? []).map(acronym).join(', '))}</span>` : ''}${s.where ? `<span class="sd-where">${w.where.toLowerCase()}: ${esc(s.where)}</span>` : ''}</button>`
+  const card = `<button class="${cls}" style="--lane:${ink}" data-stage="${esc(s.id)}"${flagged({ stage: s.id }) ? ` title="${esc(`${w.look}: ${lookText({ stage: s.id })}`)}"` : ''}><b>${esc(s.name)}</b>${(s.roles ?? []).length ? `<span>${esc((s.roles ?? []).map(acronym).join(', '))}</span>` : ''}${s.where ? `<span class="sd-where">${w.where.toLowerCase()}: ${esc(s.where)}</span>` : ''}${ritualMark({ stage: s.id })}</button>`
   if (!g) return card
   const gcls = ['sd-gate', flagged({ gate: g.id }) ? 'flag' : '', picked.gate === g.id ? 'sd-picked' : near.has(g.id) ? 'sd-linked' : ''].filter(Boolean).join(' ')
   // Spec 2026-11-02 (aprovações no gate): who always approves after the name; each that approves only when something
@@ -158,7 +166,7 @@ function stageCard(s: WayStage, ink: string, near: Set<string>) {
   const all = approvalsOf(g)
   const always = all.filter((a) => !a.when).map((a) => acronym(a.by))
   const when = all.filter((a) => a.when).map((a) => `<small class="sd-also">+ ${esc(acronym(a.by))} <span class="sd-where">${w.ifWord} ${esc(a.when!)}</span></small>`).join('')
-  return `${card}<button class="${gcls}" data-gate="${esc(g.id)}"><i></i><span>${esc(g.name)}${always.length ? ` <em>· ${esc(always.join(', '))}</em>` : ''}${when}</span></button>`
+  return `${card}<button class="${gcls}" data-gate="${esc(g.id)}"><i></i><span>${esc(g.name)}${always.length ? ` <em>· ${esc(always.join(', '))}</em>` : ''}${when}${ritualMark({ gate: g.id })}</span></button>`
 }
 
 // A gate shown again in the lane of a role that approves it, when that lane does not lead the stage it closes: a lane

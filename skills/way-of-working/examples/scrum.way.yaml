@@ -170,3 +170,47 @@ gates:
     outputs:
       - id: done-item
         name: Done item
+rituals:
+  - id: planning
+    name: Sprint planning
+    cadence: every sprint
+    who: [po, sm, dev]
+    question: What do we take into this sprint, and how?
+    inputs: [Items ready for a sprint]
+    outputs: [Sprint goal, Sprint backlog]
+    stage: build
+  - id: daily
+    name: Daily scrum
+    cadence: daily, 15 min
+    who: [dev]
+    question: What blocks the sprint goal today?
+    outputs: [Today's plan]
+    stage: build
+  - id: review
+    name: Sprint review
+    cadence: every sprint
+    who: [po, dev]
+    question: What did we build, and what comes next?
+    outputs: [Accepted items, Backlog adjusted]
+    gate: done
+  - id: retro
+    name: Retrospective
+    cadence: every sprint
+    who: [po, sm, dev]
+    question: What do we change in how we work?
+    outputs: [One or two improvements]
+agreements:
+  - id: dod
+    text: An item is done only when it meets the Definition of Done
+    who: all
+    why: so "done" means the same to everyone
+    check: the Done? gate's criteria
+  - id: wip
+    text: Finish before starting something new
+    who: [dev]
+    why: work in progress hides problems
+    check: the build stage's limit
+  - id: po-decides
+    text: Only the Product Owner orders the backlog
+    who: [po]
+    why: one voice for what comes first

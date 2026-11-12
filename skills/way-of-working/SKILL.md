@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing.
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
 ---
 
 # way-of-working: a team's way of working, clear and checkable
@@ -21,11 +21,15 @@ and pass `--lang pt` to the script for Portuguese (`en` is the default).
 Read everything the person gave you. Then write the whole `.way.yaml` at once: lanes, roles, phases, stages in order
 (each with its lane, the roles that take part, its key question, what it **receives** — an earlier output by id, or
 something from outside — what it **delivers** and its **metrics**), gates (after which stage, who approves, what must be
-ready, **what comes out of it**, where it goes back), and numbers if the material has them. The format is
+ready, **what comes out of it**, where it goes back), numbers if the material has them (a KPI's `unit`: `per_year`,
+`percent`, or a duration in `hours` or `days`, like an SLA), and — out of the flow — the **rituals** (each ceremony with
+its cadence, who takes part, what it asks, what goes in and comes out, the stage or gate it serves) and the
+**agreements** (the team's working rules: who keeps each one, why, how it is checked). The format is
 `references/format.schema.json`; `examples/` has three finished files — open the one closest to yours.
 
 - **Sort the words out as you go** (`references/words.md`): an activity is not a stage, a ritual (planning, daily,
-  review) is neither a stage nor an activity, an environment is not a phase, a person is not a role. The material will mix them; the file must not.
+  review) is neither a stage nor an activity — it goes in `rituals` — a rule the team keeps goes in `agreements`, an
+  environment is not a phase, a person is not a role. The material will mix them; the file must not.
 - **Bet what the material implies** (a "sign-off by the TL" is a gate the Tech Lead approves) and remember the bet: you
   will say it in the questions.
 - **More than one approves, or only sometimes:** a gate is still one per stage. When another role also approves it,
@@ -64,11 +68,13 @@ node scripts/build.mjs <id>.way.yaml --all [--lang pt] [--out <folder>]
 - `<id>.html` — **the map**: phases on top, who leads in the rows, the stages in order with arrows between them, the
   gates (again in the row of whoever approves them, when that row leads no stage there); a stage or a gate
   opens its detail (where each input comes from, who receives each output); a **Stages** tab with the table teams know
-  (comes in, delivers, roles, metrics; the gate as a row); tabs for roles (RACI), gates and outputs; downloads for the
+  (comes in, delivers, roles, metrics; the gate as a row); tabs for roles (RACI), gates and outputs, and **Rituals** and
+  **Agreements** when the way has them (a ritual that serves a stage or a gate shows a ◷ mark there); downloads for the
   workbook, the file and a PNG.
-- `<id>.xlsx` — **the workbook**: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, a Gate checklist and the
-  **Thread** (who delivers each output and who receives it).
-- `<id>.explainer.html` — **the explainer** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase; and `<id>.explainer.md`, the same explainer in a ```visual-explainer block that a Markdown preview with DNA (VS Code, Obsidian) draws.
+- `<id>.xlsx` — **the workbook**: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, Rituals and Agreements (when
+  there are any; read-only — the way back leaves them as they are), a Gate checklist and the **Thread** (who delivers
+  each output and who receives it).
+- `<id>.explainer.html` — **the explainer** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase, then a chapter for the rituals and one for the agreements; and `<id>.explainer.md`, the same explainer in a ```visual-explainer block that a Markdown preview with DNA (VS Code, Obsidian) draws.
 
 `--html`, `--xlsx` and `--explainer` make one each. A map that goes to others (a portal, a wiki) takes `--no-look`: «To look at» starts folded and the stages carry no mark. Embedded in another page (an iframe: a portal, a wiki), where a download from inside the frame is often blocked, the Excel, YAML and PNG buttons hand the file to the parent page instead: `postMessage({type: "dna:download", id, name, mime, data})` with `data` an ArrayBuffer; a parent that saves it answers `{type: "dna:download:ok", id}`, and with no answer in 1.5 s the page downloads it itself, as it does when it is not embedded. End with a short summary: what the flow is in one sentence, the files,
 what is still open, and that the `.way.yaml` is the source — the one to keep in version control.
@@ -124,7 +130,8 @@ recipes themselves in `references/dna/`: use those.
 ## Never
 
 - Never invent what the material and the person did not say — ask.
-- Never put a person's name as a role or a lane, an environment as a phase, an activity or a ritual as a stage.
+- Never put a person's name as a role or a lane, an environment as a phase, an activity or a ritual as a stage (a ritual
+  goes in `rituals`).
 - Never edit the generated `.html`, `.xlsx`, `.explainer.html` or `.explainer.md`: change the `.way.yaml` and build again.
 - This maps how the work *should* go. It does not track items moving through it, nor decide a gate: say so if asked.
 
