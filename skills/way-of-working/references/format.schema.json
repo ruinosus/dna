@@ -524,8 +524,11 @@
           "unit": {
             "enum": [
               "per_year",
-              "percent"
-            ]
+              "percent",
+              "hours",
+              "days"
+            ],
+            "description": "per_year: a volume; percent: a change; hours or days: a duration (an SLA, a lead time)"
           },
           "stage": {
             "$ref": "#/$defs/id"
@@ -552,6 +555,105 @@
       "type": "string",
       "maxLength": 80,
       "description": "With format: the name of before; DNA puts it in metadata.name."
+    },
+    "rituals": {
+      "description": "The ceremonies with a cadence (planning, daily, review, retro): out of the flow, never a stage.",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "name": {
+            "type": "string"
+          },
+          "cadence": {
+            "type": "string",
+            "description": "When it happens, as people say it: «diária 09:00», «por sprint», «por release»"
+          },
+          "who": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The roles that take part (ids), or all"
+          },
+          "question": {
+            "type": "string",
+            "description": "What it answers"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stage": {
+            "$ref": "#/$defs/id",
+            "description": "The stage it serves, if any"
+          },
+          "gate": {
+            "$ref": "#/$defs/id",
+            "description": "The gate it serves, if any"
+          }
+        }
+      }
+    },
+    "agreements": {
+      "description": "The working agreements: rules the team keeps, who keeps each, why and how it is checked.",
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "text": {
+            "type": "string"
+          },
+          "who": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "a role id, or all"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "Who keeps it: role ids, or all"
+          },
+          "why": {
+            "type": "string"
+          },
+          "check": {
+            "type": "string",
+            "description": "How it is checked"
+          }
+        }
+      }
     }
   },
   "$defs": {

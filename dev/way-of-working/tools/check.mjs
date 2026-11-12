@@ -71,6 +71,26 @@ const line = readFileSync(broken, 'utf8').split('\n').findIndex((l) => l.include
 const bad = run(broken)
 ok(bad.status === 1 && bad.stderr.includes(`broken.way.yaml:${line}:`) && !existsSync(join(work, 'broken.html')), `a broken file says its line (${line})`, bad.stderr)
 
+// 2.6.0: rituals and agreements (out of the flow) and KPIs in hours or days
+{
+  const { readWay, workbookOf, checkWay, reviewWay, problemText } = await import(pathToFileURL(join(skill, 'scripts/engine.mjs')).href)
+  const scrum = readFileSync(join(examples, 'scrum.way.yaml'), 'utf8')
+  const w = readWay(scrum).def
+  const sheets = workbookOf('Scrum', w, 'en')
+  const rituals = sheets.find((x) => x.key === 'rituals')
+  const agreements = sheets.find((x) => x.key === 'agreements')
+  ok(rituals?.rows.length === w.rituals.length + 1 && agreements?.rows.length === w.agreements.length + 1, 'scrum: a Rituals and an Agreements sheet, a row each')
+  ok(!sheets.some((x) => x.key === 'rituals') || !workbookOf('x', readWay(readFileSync(join(examples, 'feature-delivery.way.yaml'), 'utf8')).def, 'pt').some((x) => x.key === 'rituals'), 'a way with no rituals has no Rituals sheet')
+  const wrong = readWay(scrum.replace('    who: [dev]\n    question: What blocks', '    who: [qa]\n    question: What blocks').replace('    who: [po]\n    why: one voice', '    why: one voice')).def
+  const problems = checkWay(wrong).map(problemText)
+  ok(problems.includes('rituals daily · who: "qa" does not exist'), 'a ritual naming a role that is not there is refused', problems.join('; '))
+  ok(reviewWay(wrong).some((l) => l.key === 'agreementNobody'), 'an agreement nobody keeps is a point to look at')
+  const hours = readWay(`${scrum}kpis:\n  - id: answer\n    name: Answer time\n    unit: hours\n    stage: refine\n    source: measured\n`).def
+  ok(hours && !checkWay(hours).some((p) => p.key === 'missing' && p.field === 'unit') && workbookOf('x', hours, 'pt').find((x) => x.key === 'kpis').rows.some((r) => r[2] === 'horas'), 'a KPI in hours: accepted, the workbook says «horas»')
+  const weeks = readWay(`${scrum}kpis:\n  - id: answer\n    name: Answer time\n    unit: weeks\n    stage: refine\n    source: measured\n`).def
+  ok(checkWay(weeks).some((p) => p.key === 'missing' && p.field === 'unit'), 'a KPI in weeks: refused')
+}
+
 // the map opens with no internet: nothing loaded from elsewhere
 const map = readFileSync(join(skill, 'assets/map.html'), 'utf8')
 ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(map) && !/@import\s+url\(\s*["']?https?:/i.test(map), 'the map loads nothing from the internet')

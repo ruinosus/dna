@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 — 2026-11-12
+
+Rituals and agreements (DNA 2.6.0): two optional lists out of the flow — `rituals` (cadence, who, question, inputs,
+outputs, the stage or gate served) and `agreements` (text, who keeps it, why, check) — checked, looked at, shown in
+their own map tabs and workbook sheets, a ◷ mark where a ritual serves, a chapter each in the explainer; and KPIs in
+`hours` or `days`.
+
 ## 0.5.0 — 2026-11-12
 
 The map's downloads work when it is embedded (DNA 2.5.0): inside an iframe the Excel, YAML and PNG go to the parent

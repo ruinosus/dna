@@ -10,8 +10,12 @@ with your bet), never copy the mistake into the file.
   4 to 8 is usual; more than 10 usually means activities became stages.
 - **An activity** is what is done inside a stage (write test cases, code review, call the client, update the docs).
   Never a stage of its own: it goes in that stage's `activities` (`required: true` when a gate checks it).
-- **A ritual** (planning, refinement, daily, sprint review, retrospective) has a cadence, not a place in the flow.
-  Leave it out of the file — not a stage, not an activity; mention it in your summary if the team cares.
+- **A ritual** (planning, refinement, daily, sprint review, retrospective) has a cadence, not a place in the flow:
+  not a stage, not an activity. It goes in `rituals` — its cadence as people say it, who takes part (`who`), what it
+  asks, what goes in and comes out, and the stage or gate it serves, if one.
+- **An agreement** is a rule the team keeps (a Definition of Done, "finish before starting", "only the PO orders the
+  backlog"): it goes in `agreements` — the rule as a sentence, who keeps it (`who`: role ids, or `all`), why, and how
+  it is checked. A rule a gate checks is that gate's criteria; the agreement says it applies everywhere.
 - **A phase** is a milestone that ends in a deliverable, usually at a gate (Discovery, Delivery, Operation). **An
   environment or a system** (DEV, QA, UAT, PRD, "the portal") is never a phase: it is a stage's `where`.
 - **A lane** is who *leads* a stage: a role, a team or an area. The stage sits in that lane on the map.

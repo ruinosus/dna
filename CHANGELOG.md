@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.6.0 — 2026-11-12
+
+way-of-working: **rituals and agreements, and KPIs that are durations** — seen in a factory whose map showed only the
+flow, while how the team works (its ceremonies, its rules, its answer-time SLA) lived nowhere in it.
+
+- **`rituals`**: each ceremony with a cadence (planning, daily, review, retro) out of the flow — a ritual is not a
+  stage — with its `cadence` as people say it, `who` takes part (role ids), the `question` it answers, `inputs`,
+  `outputs` and the `stage` or `gate` it serves.
+- **`agreements`**: the team's working rules — the `text`, `who` keeps it (role ids, or `all`), `why`, and how it is
+  checked (`check`).
+- The check refuses a repeated id and a role, stage or gate that is not there; «To look at» points at a ritual nothing
+  comes out of, a ritual nobody takes part in and an agreement nobody keeps.
+- The map gets **Rituals** and **Agreements** tabs (when the way has them) and a ◷ mark on the stage or gate a ritual
+  serves; the workbook a sheet each (read-only on the way back); the explainer a chapter each, after the flow.
+- **A KPI's `unit` can be `hours` or `days`**: a duration, like an SLA ("the PO answers in 2 h") or a lead time; the
+  workbook says the unit in words.
+- `references/words.md` gives a ritual and an agreement their place; the scrum example has both.
+
 ## 2.5.0 — 2026-11-12
 
 way-of-working and visual-explainer: **downloads that work when the page is embedded** — seen in a portal whose
