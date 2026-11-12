@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.4.0 — 2026-11-12
+
+way-of-working: **the map reads as a flow** — seen in a real map published in a portal, where it looked cut and
+disconnected.
+
+- **Arrows between the stages** (the way's own `next` links, or one stage after another), square corners in the gap
+  between the columns; the ones of the stage picked in the focus colour. They go into the PNG too.
+- **A map wider than its box says so**: the scrollbar stays visible (macOS hid it), the edge fades and «Scroll
+  sideways for the rest →» shows until the end; **Fit to width** zooms the whole map into the box.
+- **A gate also in the row of whoever approves it**, when that row leads no stage there — a lane that only approves
+  (an executive, a committee) is no longer an empty row. The `!` that says it leads nothing stays.
+- **The approver under the gate's name**, on a line of its own, instead of «· PO» wrapping alone.
+- **A legend** under the map with only the marks it has (the order, gates, to look at, optional); a stage marked to
+  look at says why when you hover it.
+- **`--no-look`**, for a map that goes to others: «To look at» starts folded and the stages carry no mark (the check
+  still prints it). «To look at» folds in any map.
+
 ## 2.3.1 — 2026-11-06
 
 - service-blueprint: **a key the format does not have is an error**, with its line and the key a typo meant —

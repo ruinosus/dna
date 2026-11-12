@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 — 2026-11-12
+
+The map reads as a flow (DNA 2.4.0): arrows between the stages, a visible cue and **Fit to width** when the map is
+wider than its box, each gate also in the row of whoever approves it, the approver on its own line, a legend, the
+reason of a mark on hover, and `--no-look` for a published map (`To look at` folded, no marks).
+
 ## 0.3.0 — 2026-11-01
 
 The explainer's review no longer hangs in cloud sandboxes.
