@@ -139,10 +139,9 @@ for (const [s, args] of cases) {
   const said = [market.description, ...market.plugins.map((p) => p.description)].join(' ')
   const missing = SKILLS.filter((s) => !said.includes(s))
   expect(/^DNA\b/.test(market.description) && /\bEight\b|\beight\b/.test(market.description) && !missing.length, `the marketplace says DNA, eight skills, and names each${missing.length ? ` — not: ${missing.join(', ')}` : ''} (${market.description})`)
-  // the marketplace also lists DNA's sibling plugins (plugins/<name>/), each with its own plugin.json
-  const siblings = market.plugins.filter((p) => p.name !== 'dna')
-  const bad = siblings.filter((p) => p.source !== `./plugins/${p.name}` || JSON.parse(readFileSync(join(repo, p.source, '.claude-plugin/plugin.json'), 'utf8')).name !== p.name)
-  expect(market.plugins[0].name === 'dna' && market.plugins[0].source === './' && siblings.length === readdirSync(join(repo, 'plugins')).length && !bad.length, `the marketplace: dna, and its sibling plugins (${siblings.map((p) => p.name).join(', ')})`)
+  // the marketplace lists dna alone, at the root, and no plugin is nested in it: claude.ai skips a "./" plugin that
+  // holds another .claude-plugin/plugin.json (sibling plugins live in their own repositories)
+  expect(market.plugins.length === 1 && market.plugins[0].name === 'dna' && market.plugins[0].source === './' && !existsSync(join(repo, 'plugins')), `the marketplace: dna alone, nothing nested (${market.plugins.map((p) => p.name).join(', ')})`)
 }
 
 // DNA's header is how a file says what it is now; every file written before it still reads: each kind, written back

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **workday-integration moves to its own repository and marketplace**,
+  [ruinosus/workday-integration](https://github.com/ruinosus/workday-integration): `plugins/workday-integration`,
+  `dev/workday-integration` and `npm/workday-integration` leave this repository, and the `dna` marketplace lists only
+  `dna`. claude.ai skipped the `dna` plugin («found nested: plugins/workday-integration/.claude-plugin/plugin.json»)
+  because a plugin with `source: "./"` held another plugin inside it. Install it now with
+  `/plugin marketplace add ruinosus/workday-integration`.
+
 ## 2.6.0 — 2026-11-12
 
 way-of-working: **rituals and agreements, and KPIs that are durations** — seen in a factory whose map showed only the

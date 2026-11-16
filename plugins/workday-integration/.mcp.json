@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "workday-wws": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/skills/workday-integration/scripts/mcp.mjs"]
-    }
-  }
-}
