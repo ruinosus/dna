@@ -83,10 +83,11 @@ package (it also powers the VS Code and Obsidian extensions).
 
 ## A sibling: workday-integration
 
-[`plugins/workday-integration`](plugins/workday-integration) is a second plugin in this marketplace, for whoever
-designs a Workday integration: a local catalog of the Workday Web Services (SOAP) — the operation for a use case, its
-fields, a SOAP envelope and the Copilot Studio «Execute SOAP operation» spec. It calls no tenant. Install it with
-`/plugin install workday-integration@dna`. Not affiliated with Workday.
+[workday-integration](https://github.com/ruinosus/workday-integration) lives in its own repository and marketplace,
+for whoever designs a Workday integration: a local catalog of the Workday Web Services (SOAP) — the operation for a use
+case, its fields, a SOAP envelope and the Copilot Studio «Execute SOAP operation» spec. It calls no tenant. Install it
+with `/plugin marketplace add ruinosus/workday-integration` then `/plugin install workday-integration@workday-integration`.
+Not affiliated with Workday.
 
 ## DNA and OKF
 
