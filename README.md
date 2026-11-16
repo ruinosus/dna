@@ -48,21 +48,24 @@ Elsewhere the skills work without it.
 
 ## Install
 
-**Claude Code** — all seven at once:
+**Claude Code** — all eight at once:
 
 ```
 /plugin marketplace add ruinosus/dna
 /plugin install dna@dna
 ```
 
-**VS Code (GitHub Copilot)** — the same plugin, in agent mode: run **Chat: Add Plugin Marketplace** with
-`ruinosus/dna` (or add it to `chat.plugins.marketplaces` in your settings), then install **dna** from
-Agent Customizations › Browse. The Copilot CLI takes the same marketplace:
+**VS Code (GitHub Copilot)** — the same plugin, in agent mode, with `chat.plugins.enabled` on: in Agent
+Customizations › Browse › Configure Marketplaces › Add Marketplace, enter `ruinosus/dna` (or add it to
+`chat.plugins.marketplaces` in your settings), then install **dna** from the list. The Copilot CLI takes the same
+marketplace:
 
 ```
 copilot plugin marketplace add ruinosus/dna
 copilot plugin install dna@dna
 ```
+
+In Copilot the eight skills work; the mod that checks each recipe as it is written is Claude Code's alone.
 
 **claude.ai** — each skill is a zip in the [latest release](https://github.com/ruinosus/dna/releases)
 (`visual-explainer.zip`, `visual-pitch.zip`, …): Settings › Capabilities › Skills › Upload, with code execution on.
