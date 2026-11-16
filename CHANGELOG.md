@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.6.1 — 2026-11-16
 
+- **way-of-working: the RACI key sits under the matrix.** On the map's Roles tab the key («R leads (the stage's lane)
+  · C takes part · A approves the gate after it») came out as the matrix's last row, squeezed into the first column
+  (the acronyms), one word per line. A one-cell row of a sheet is a note: the map shows it as a line below the table,
+  at full width; the blank row before it (spacing in Excel) is left out. The workbook does not change.
 - **workday-integration moves to its own repository and marketplace**,
   [ruinosus/workday-integration](https://github.com/ruinosus/workday-integration): `plugins/workday-integration`,
   `dev/workday-integration` and `npm/workday-integration` leave this repository, and the `dna` marketplace lists only

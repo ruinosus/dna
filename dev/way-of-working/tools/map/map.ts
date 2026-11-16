@@ -246,7 +246,11 @@ function table(sheet: Sheet) {
     return `<${tag}${cls ? ` class="${cls}"` : ''}${c.fill && !th ? ` style="background:#${c.fill}"` : ''}>${esc(c.v)}</${tag}>`
   }
   const [head, ...rows] = sheet.rows
-  return `<div class="sd-table" role="tabpanel"><table><thead><tr>${head.map((v) => cell(v, true)).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((v) => cell(v, false)).join('')}</tr>`).join('')}</tbody></table></div>`
+  // A row of one cell is a note under the sheet (the RACI's key): below the table, not squeezed into its first column.
+  // The blank row the workbook puts before it is only spacing in Excel.
+  const notes = rows.filter((r) => r.length === 1)
+  const body = rows.filter((r) => r.length > 1)
+  return `<div class="sd-table" role="tabpanel"><table><thead><tr>${head.map((v) => cell(v, true)).join('')}</tr></thead><tbody>${body.map((r) => `<tr>${r.map((v) => cell(v, false)).join('')}</tr>`).join('')}</tbody></table></div>${notes.map(([v]) => `<p class="sd-legend sd-note">${esc(typeof v === 'object' ? v.v : v)}</p>`).join('')}`
 }
 
 // Embedded in a page (an iframe: a portal, a wiki), a download from inside the frame is often blocked. Then the file
