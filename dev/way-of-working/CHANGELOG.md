@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 — 2026-11-16
+
+The RACI key sits under the matrix (DNA 2.6.1): a one-cell row of a sheet is a note, shown below the map's table at
+full width instead of squeezed into its first column; the blank row before it is left out.
+
 ## 0.6.0 — 2026-11-12
 
 Rituals and agreements (DNA 2.6.0): two optional lists out of the flow — `rituals` (cadence, who, question, inputs,

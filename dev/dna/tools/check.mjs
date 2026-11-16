@@ -24,6 +24,13 @@ execFileSync(process.execPath, [join(repo, 'dev/dna/tools/pack.mjs')], { stdio: 
 const packed = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: join(repo, 'npm/dna'), encoding: 'utf8' }))[0].files.map((f) => f.path)
 expect(SKILLS.every((s) => packed.includes(`skills/${s}/scripts/build.mjs`)) && !packed.some((p) => p.endsWith('SKILL.md')), `npm dna carries the eight builds (${packed.length} files)`)
 
+// The release rules (also run alone by CI): a change to what the plugin ships raises the version, one version in
+// plugin.json, npm/dna and the CHANGELOG, and no plugin nested in dna.
+{
+  const r = runNode(join(repo, 'dev/dna/tools/release.mjs'))
+  expect(r.status === 0, 'the release rules hold (dev/dna/tools/release.mjs)', r.stdout + r.stderr)
+}
+
 // npx @ruinosus/dna <skill> …: an example of each, drawn.
 const cli = join(repo, 'npm/dna/cli.mjs')
 const none = runNode(cli)
