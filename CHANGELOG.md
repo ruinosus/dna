@@ -6,6 +6,11 @@
   · C takes part · A approves the gate after it») came out as the matrix's last row, squeezed into the first column
   (the acronyms), one word per line. A one-cell row of a sheet is a note: the map shows it as a line below the table,
   at full width; the blank row before it (spacing in Excel) is left out. The workbook does not change.
+- **A change nobody gets fails the check.** Claude Code and claude.ai update a marketplace plugin only when its version
+  changes. `dev/dna/tools/release.mjs` (run by `check.mjs`, and by CI on every pull request) fails when what the
+  plugin ships (`skills/`, `hooks/`, `kit/`, `types/`, `.claude-plugin/`) changed since `main` without a version above
+  `main`'s, when `plugin.json`, `npm/dna` and the CHANGELOG disagree, and when another `.claude-plugin/plugin.json` is
+  in the tree. `CONTRIBUTING.md` and the pull request template carry the checklist and how to update after a merge.
 - **workday-integration moves to its own repository and marketplace**,
   [ruinosus/workday-integration](https://github.com/ruinosus/workday-integration): `plugins/workday-integration`,
   `dev/workday-integration` and `npm/workday-integration` leave this repository, and the `dna` marketplace lists only

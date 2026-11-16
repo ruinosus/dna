@@ -1,0 +1,20 @@
+# Every pull request: what the plugin ships changed → the version went up; one version; nothing nested.
+# (Claude Code and claude.ai update a marketplace plugin only when its version changes.)
+name: release rules
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  release-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node dev/dna/tools/release.mjs
+        env:
+          DNA_BASE: origin/main
